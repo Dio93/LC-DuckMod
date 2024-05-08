@@ -30,6 +30,7 @@ namespace DuckMod
             }
 
             mls = BepInEx.Logging.Logger.CreateLogSource(modGUID);
+            PetAI.InitializeRPCS_PetAI();
 
             string assetDir = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "duckmod");
             AssetBundle bundle = AssetBundle.LoadFromFile(assetDir);

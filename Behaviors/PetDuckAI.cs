@@ -31,28 +31,6 @@ namespace DuckMod.Behaviors
 
             shipState = ShipState.InSpace;
 
-            //this.enemyType = new EnemyType();
-            //this.enemyType.name = "Pet Duck";
-            //this.enemyType.isDaytimeEnemy = false;
-            //this.enemyType.isOutsideEnemy = false;
-            //this.enemyType.normalizedTimeInDayToLeave = Mathf.Infinity;
-            //this.enemyType.PowerLevel = 0;
-            //this.enemyType.canDie = true;
-            //this.enemyType.pushPlayerForce = 0;
-            //this.enemyType.canSeeThroughFog = false;
-            //this.enemyType.destroyOnDeath = true;
-            //this.enemyType.spawningDisabled = true;
-            
-            //this.enemyHP = this.maxHp;
-            //this.AIIntervalTime = 1f;
-            //this.ventAnimationFinished = true;
-            //this.isOutside = true;
-            //this.isEnemyDead = false;
-            //this.inSpecialAnimation = false;
-            //this.serverPosition = base.transform.position;
-            //this.movingTowardsTargetPlayer = false;
-            //this.moveTowardsDestination = true;
-
             if (mls != null)
             {
                 mls.LogInfo("[Pet Duck] Is pet duck owner: " + base.IsOwner);
@@ -60,15 +38,6 @@ namespace DuckMod.Behaviors
                 mls.LogInfo("[Pet Duck] Velocity: " + this.agent.velocity);
                 mls.LogInfo("[Pet Duck] Acceleration: " + this.agent.acceleration);
             }
-
-            //if (base.IsOwner)
-            //{
-            //    base.SyncPositionToClients();
-            //}
-            //else
-            //{
-
-            //}
         }
 
         override public void Update()
@@ -110,7 +79,7 @@ namespace DuckMod.Behaviors
                 this.targetItem = this.GetClosestItem();
                 if (mls != null && this.targetItem != null)
                 {
-                    mls.LogInfo("[Pet Duck] Target item: " + this.targetItem.name);
+                    //mls.LogInfo("[Pet Duck] Target item: " + this.targetItem.name);
                 }
             }
 
@@ -249,7 +218,5 @@ namespace DuckMod.Behaviors
                 }
             }
         }
-
-        
     }
 }
