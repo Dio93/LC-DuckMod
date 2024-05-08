@@ -15,7 +15,8 @@ namespace DuckMod.Behaviors
         {
             LookingAround,
             Following,
-            SearchingItem,
+            MovingToItem,
+            MovingToEntrance,
             Searching
         }
 
@@ -27,7 +28,7 @@ namespace DuckMod.Behaviors
 
             // Initialize enemy variables
             this.agent.enabled = true;
-            this.agent.speed = 4f;
+            this.agent.speed = 4.5f;
 
             shipState = ShipState.InSpace;
 
@@ -42,10 +43,7 @@ namespace DuckMod.Behaviors
 
         override public void Update()
         {
-            if (this.agent.enabled)
-            {
-                base.Update();
-            }            
+            base.Update();          
             if (mls != null)
             {
                 //mls.LogInfo("[Pet Duck] Is pet duck owner: " + base.IsOwner);
@@ -64,15 +62,10 @@ namespace DuckMod.Behaviors
 
             if (this.grabbedItems.Count > 0 && this.isInsideShip)
             {
-                foreach(GrabbableObject item in this.grabbedItems)
-                {
-                    this.DropItem(item);
-                }
+                this.DropAndSync(this.grabbedItems[this.grabbedItems.Count-1]);
             }
 
             this.targetPlayer = this.GetClosestPlayer();
-
-            this.UpdateCollisions();
 
             if (this.grabbedItems.Count < this.maxGrabbedItems & this.targetItem == null)
             {
@@ -90,9 +83,14 @@ namespace DuckMod.Behaviors
 
             float playerDistance = Vector3.Distance(base.transform.position, this.targetPlayer.transform.position);
 
-            if (this.targetItem != null)
+            // player on another level
+            if ((this.targetPlayer.isInsideFactory && !this.isInFactory) || (!this.targetPlayer.isInsideFactory && this.isInFactory))
             {
-                this.petState = PetState.SearchingItem;
+                this.petState = PetState.MovingToEntrance;
+            }
+            else if (this.targetItem != null)
+            {
+                this.petState = PetState.MovingToItem;
             }
             else if (playerDistance <= this.minPlayerDist)
             {
@@ -128,45 +126,19 @@ namespace DuckMod.Behaviors
                     }
                     break;
 
-                case PetState.SearchingItem:
-                    if (true)
+                case PetState.MovingToItem:
+                    if (!GrabAndSync())
                     {
                         agent.SetDestination(this.targetItem.transform.position);
                     }
                     break;
 
-                case PetState.Searching:
-
-                    // player on another level
-                    if (this.targetPlayer.isInsideFactory && !this.isInFactory)
-                    {
-                        this.agent.enabled = false;
-                        Vector3 entrancePos = RoundManager.FindMainEntrancePosition(false, false);
-                        base.transform.position = RoundManager.Instance.GetNavMeshPosition(entrancePos);
-                        this.agent.enabled = true;
-                        this.isInFactory = true;
-                    }
-                    else if (!this.targetPlayer.isInsideFactory && this.isInFactory)
-                    {
-                        this.agent.enabled = false;
-                        Vector3 entrancePos = RoundManager.FindMainEntrancePosition(false, true);
-                        base.transform.position = RoundManager.Instance.GetNavMeshPosition(entrancePos);
-                        this.agent.enabled = true;
-                        this.isInFactory = false;
-                    }
+                case PetState.MovingToEntrance:
+                    this.Teleport();
                     break;
-            }
 
-            // check for enemies
-            if (Time.time - this.lastCheckEnemy >= this.checkEnemyCooldown)
-            {
-                this.lastCheckEnemy = Time.time;
-
-                if (this.CheckForEnemies() && !this.audioSource.isPlaying)
-                {
-                    this.audioSource.Play();
-                    this.lastCheckEnemy = Time.time + 60;
-                }
+                case PetState.Searching:
+                    break;
             }
         }
 
@@ -188,18 +160,17 @@ namespace DuckMod.Behaviors
 
         override public bool Hit(int force, UnityEngine.Vector3 hitDirection, GameNetcodeStuff.PlayerControllerB playerWhoHit, bool playHitSFX, int hitID)
         {
-            int playerWhoHitID = -1;
-            if (playerWhoHit != null)
-            {
-                playerWhoHitID = (int)playerWhoHit.playerClientId;
-                HitEnemy(force, playerWhoHit, playHitSFX, hitID);
-            }
-            HitServerRpc(force, playerWhoHitID, playHitSFX, hitID);
+            //int playerWhoHitID = -1;
+            //if (playerWhoHit != null)
+            //{
+            //    playerWhoHitID = (int)playerWhoHit.playerClientId;
+            //    AddHpServerRpc(force);
+            //}
 
-            if (mls != null)
-            {
-                mls.LogInfo("[Pet DUCK] Duck was hit :(\nHP:\t" + this.hp);
-            }
+            //if (mls != null)
+            //{
+            //    mls.LogInfo("[Pet DUCK] Duck was hit :(\nHP:\t" + this.hp);
+            //}
             return true;
         }
 
