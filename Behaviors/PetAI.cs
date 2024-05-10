@@ -25,6 +25,8 @@ namespace DuckMod.Behaviors
         protected AudioSource audioSource;
         protected PhysicsProp physicsProp;
         protected NetworkObject networkObject;
+        protected Animator animator;
+        protected Transform itemHolder;
 
         protected int maxHp = 10;
         protected int hp;
@@ -49,11 +51,11 @@ namespace DuckMod.Behaviors
         protected RaycastHit[] hits;
 
         private Vector3 serverPosition;
-        private float updatePositionThreshold = 0.1f;
+        private float updatePositionThreshold = 0.01f;
         private float previousYRotation;
         private short targetYRotation;
-        private Vector3 tempVelocity = Vector3.one;
-        private float syncMovementSpeed = 0.22f;
+        private Vector3 tempVelocity = Vector3.zero;
+        private float syncMovementSpeed = 0.1f;
 
         public virtual void Start()
         {
@@ -61,6 +63,12 @@ namespace DuckMod.Behaviors
             this.networkObject = GetComponent<NetworkObject>();
             this.audioSource = GetComponent<AudioSource>();
             this.physicsProp = GetComponent<PhysicsProp>();
+            this.animator = GetComponentInChildren<Animator>();
+            this.itemHolder = transform.GetChild(1);
+            if (this.itemHolder == null)
+            {
+                this.itemHolder = this.transform;
+            }
 
             this.agent.enabled = false;
 
@@ -75,22 +83,36 @@ namespace DuckMod.Behaviors
 
         public virtual void Update()
         {
-            if (!this.agent.enabled)
-            {
-                return;
-            }
-
             Init();
             if (base.IsOwner)
             {
-                DoAI();
+                if (this.agent.enabled)
+                {
+                    DoAI();
+                    if (this.agent.velocity.magnitude > 0)
+                    {
+                        this.animator.SetBool("IsWalking", true);
+                    }
+                    else
+                    {
+                        this.animator.SetBool("IsWalking", false);
+                    }
+                }
                 SyncPosition();
                 SyncRotation();
             }
             else
             {
                 syncMovementSpeed = Vector3.Distance(transform.position, destination) * 0.5f;
-                base.transform.position = Vector3.SmoothDamp(base.transform.position, serverPosition, ref tempVelocity, syncMovementSpeed);
+                this.transform.position = Vector3.SmoothDamp(base.transform.position, serverPosition, ref tempVelocity, syncMovementSpeed);
+                if (tempVelocity.magnitude > 0.1f)
+                {
+                    this.animator.SetBool("IsWalking", true);
+                }
+                else
+                {
+                    this.animator.SetBool("IsWalking", false);
+                }
                 //base.transform.eulerAngles = new Vector3(base.transform.eulerAngles.x, Mathf.LerpAngle(base.transform.eulerAngles.y, targetYRotation, 15f * Time.deltaTime), base.transform.eulerAngles.z);
                 //base.transform.position = this.serverPosition;
                 this.transform.rotation = Quaternion.Euler(this.transform.rotation.eulerAngles.x, this.targetYRotation, this.transform.rotation.eulerAngles.z);
@@ -506,7 +528,7 @@ namespace DuckMod.Behaviors
             GrabbableObject item = networkObject.GetComponent<GrabbableObject>();
             this.grabbedItems.Add(item);
             this.targetItem = null;
-            item.parentObject = this.transform;
+            item.parentObject = this.itemHolder;
             item.EnablePhysics(false);
             item.isHeld = true;
             item.hasHitGround = false;
