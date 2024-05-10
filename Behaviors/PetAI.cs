@@ -97,9 +97,10 @@ namespace DuckMod.Behaviors
                     {
                         this.animator.SetBool("IsWalking", false);
                     }
+                    
+                    SyncPosition();
+                    SyncRotation();
                 }
-                SyncPosition();
-                SyncRotation();
             }
             else
             {
@@ -172,7 +173,7 @@ namespace DuckMod.Behaviors
                             mls.LogInfo("[Pet Duck] Ship has landed!");
                         }
 
-                        StartRound(true);
+                        StartRound(IsOwner);
                     }
                     break;
 
@@ -194,11 +195,19 @@ namespace DuckMod.Behaviors
         protected void EnterShip()
         {
             base.transform.SetParent(StartOfRound.Instance.elevatorTransform, true);
+            if (mls != null)
+            {
+                mls.LogInfo("[Pet Duck] Enters ship!");
+            }
             OnEnterShip();
         }
 
         protected void LeaveShip()
         {
+            if (mls != null)
+            {
+                mls.LogInfo("[Pet Duck] Leaves ship!");
+            }
             base.transform.SetParent(null, true);
             OnLeaveShip();
         }
@@ -208,18 +217,42 @@ namespace DuckMod.Behaviors
             this.agent.enabled = enableAgent;
             this.physicsProp.enabled = false;
             this.grabbableItems.Clear();
-            foreach(GrabbableObject item in FindObjectsOfType<GrabbableObject>())
+            ItemDropship dropShip = FindObjectOfType<ItemDropship>();
+            foreach (GrabbableObject item in FindObjectsOfType<GrabbableObject>())
             {
-                if (item.GetComponent<PetAI>() == null)
+                if (item.GetComponent<PetAI>() == null) 
                 {
+                    if (dropShip != null && !item.isInShipRoom)
+                    {
+                        if (mls != null)
+                        {
+                            mls.LogInfo("Drop ship: " + dropShip.name);
+                        }
+                        if (Vector3.Distance(dropShip.transform.position, item.transform.position) <= 5f)
+                        {
+                            if (mls != null)
+                            {
+                                mls.LogInfo("Skip Item: " + item.name);
+                            }
+                            continue;
+                        }
+                    }
                     this.grabbableItems.Add(item);
                 }
+            }
+            if (mls != null)
+            {
+                mls.LogInfo("[Pet Duck] Start Round!");
             }
             OnStartRound();
         }
 
         protected void EndRound()
         {
+            if (mls != null)
+            {
+                mls.LogInfo("[Pet Duck] End Round!");
+            }
             this.agent.enabled = false;
             this.physicsProp.enabled = true;
             OnEndRound();
@@ -647,7 +680,7 @@ namespace DuckMod.Behaviors
             item.EnablePhysics(enable: true);
             item.fallTime = 0f;
             item.startFallingPosition = item.transform.parent.InverseTransformPoint(item.transform.position);
-            item.targetFloorPosition = item.transform.parent.InverseTransformPoint(item.transform.position);
+            item.targetFloorPosition = item.transform.parent.InverseTransformPoint(item.transform.position + this.transform.forward);
             item.floorYRot = -1;
             item.DiscardItemFromEnemy();
 
