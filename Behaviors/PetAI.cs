@@ -22,7 +22,8 @@ namespace DuckMod.Behaviors
         public static ManualLogSource mls;
 
         protected NavMeshAgent agent;
-        protected AudioSource audioSource;
+        protected AudioSource audioQuacking;
+        protected AudioSource audioWalking;
         protected PhysicsProp physicsProp;
         protected NetworkObject networkObject;
         protected Animator animator;
@@ -57,14 +58,38 @@ namespace DuckMod.Behaviors
         private Vector3 tempVelocity = Vector3.zero;
         private float syncMovementSpeed = 0.1f;
 
+        private bool freeze = false;
+
         public virtual void Start()
         {
             this.agent = GetComponent<NavMeshAgent>();
             this.networkObject = GetComponent<NetworkObject>();
-            this.audioSource = GetComponent<AudioSource>();
+            foreach(AudioSource audioSource in GetComponents<AudioSource>())
+            {
+                if (audioSource.clip.name == "duck_quacking")
+                {
+                    if (mls != null)
+                    {
+                        mls.LogInfo("[Pet Duck] Quacking Audio Clip found.");
+                    }
+                    this.audioQuacking = audioSource;
+                    this.audioQuacking.Play();
+                }
+                else if (audioSource.clip.name == "duck_walking")
+                {
+                    if (mls != null)
+                    {
+                        mls.LogInfo("[Pet Duck] Walking Audio Clip found.");
+                    }
+                    this.audioWalking = audioSource;
+                }
+            }
+
+            this.audioQuacking = GetComponent<AudioSource>();
             this.physicsProp = GetComponent<PhysicsProp>();
             this.animator = GetComponentInChildren<Animator>();
             this.itemHolder = transform.GetChild(1);
+
             if (this.itemHolder == null)
             {
                 this.itemHolder = this.transform;
@@ -91,11 +116,11 @@ namespace DuckMod.Behaviors
                     DoAI();
                     if (this.agent.velocity.magnitude > 0)
                     {
-                        this.animator.SetBool("IsWalking", true);
+                        StartWalking();
                     }
                     else
                     {
-                        this.animator.SetBool("IsWalking", false);
+                        StopWalking();
                     }
                     
                     SyncPosition();
@@ -104,15 +129,14 @@ namespace DuckMod.Behaviors
             }
             else
             {
-                syncMovementSpeed = Vector3.Distance(transform.position, destination) * 0.5f;
                 this.transform.position = Vector3.SmoothDamp(base.transform.position, serverPosition, ref tempVelocity, syncMovementSpeed);
                 if (tempVelocity.magnitude > 0.1f)
                 {
-                    this.animator.SetBool("IsWalking", true);
+                    StartWalking();
                 }
                 else
                 {
-                    this.animator.SetBool("IsWalking", false);
+                    StopWalking();
                 }
                 //base.transform.eulerAngles = new Vector3(base.transform.eulerAngles.x, Mathf.LerpAngle(base.transform.eulerAngles.y, targetYRotation, 15f * Time.deltaTime), base.transform.eulerAngles.z);
                 //base.transform.position = this.serverPosition;
@@ -124,15 +148,52 @@ namespace DuckMod.Behaviors
             {
                 this.lastCheckEnemy = Time.time;
 
-                if (this.CheckForEnemies() && !this.audioSource.isPlaying)
+                if (this.CheckForEnemies())
                 {
-                    this.audioSource.Play();
-                    this.lastCheckEnemy = Time.time + 60;
+                    this.StartQuacking();
+                    this.lastCheckEnemy = Time.time + 10;
                 }
             }
         }
 
         public abstract void DoAI();
+
+        protected void StartQuacking()
+        {
+            if (this.audioQuacking != null)
+            {
+                if (!this.audioQuacking.isPlaying)
+                {
+                    this.audioQuacking.Play();
+                }
+            }
+        }
+
+        protected void StartWalking()
+        {
+            this.animator.SetBool("IsWalking", true);
+            if (this.audioWalking != null)
+            {
+                if (this.audioWalking.isPlaying)
+                {
+                    return;
+                }
+                this.audioWalking.Play();
+            }
+        }
+
+        protected void StopWalking()
+        {
+            this.animator.SetBool("IsWalking", false);
+            if (this.audioWalking != null)
+            {
+                if (!this.audioWalking.isPlaying)
+                {
+                    return;
+                }
+                this.audioWalking.Stop();
+            }
+        }
 
         protected bool IsInsideShip()
         {
@@ -152,15 +213,6 @@ namespace DuckMod.Behaviors
         {
             this.UpdateCollisions();
             this.isInsideShip = this.IsInsideShip();
-
-            if (isInsideShip && base.transform.parent == null)
-            {
-                EnterShip();
-            }
-            else if (!isInsideShip && base.transform.parent != null)
-            {
-                LeaveShip();
-            }
 
             switch (shipState)
             {
@@ -190,6 +242,18 @@ namespace DuckMod.Behaviors
                     }
                     break;
             }
+
+            if (!freeze)
+            {
+                if (isInsideShip && base.transform.parent == null)
+                {
+                    EnterShip();
+                }
+                else if (!isInsideShip && base.transform.parent != null)
+                {
+                    LeaveShip();
+                }
+            }
         }
 
         protected void EnterShip()
@@ -214,6 +278,7 @@ namespace DuckMod.Behaviors
 
         protected void StartRound(bool enableAgent)
         {
+            this.freeze = false;
             this.agent.enabled = enableAgent;
             this.physicsProp.enabled = false;
             this.grabbableItems.Clear();
@@ -253,6 +318,7 @@ namespace DuckMod.Behaviors
             {
                 mls.LogInfo("[Pet Duck] End Round!");
             }
+            this.freeze = true;
             this.agent.enabled = false;
             this.physicsProp.enabled = true;
             OnEndRound();
@@ -262,6 +328,34 @@ namespace DuckMod.Behaviors
         protected virtual void OnLeaveShip() { }
         protected virtual void OnStartRound() { }
         protected virtual void OnEndRound() { }
+
+        protected bool IsInSight(Transform target)
+        {
+            //Ray ray = new Ray(this.transform.position, target.position - this.transform.position);
+            bool isInSight = Physics.Linecast(this.itemHolder.position, target.position, StartOfRound.Instance.collidersAndRoomMaskAndDefault);
+            if (mls != null)
+            {
+                mls.LogInfo(target.name + " " + isInSight);
+            }
+            return !isInSight;
+            //RaycastHit[] hits = Physics.RaycastAll(ray);
+            //foreach(RaycastHit hit in hits)
+            //{
+            //    if (hit.collider.GetComponent<PetAI>() != null)
+            //    {
+            //        continue;
+            //    }
+            //    else if (hit.collider.transform == target)
+            //    {
+            //        return true;
+            //    }
+            //    else
+            //    {
+            //        return false;
+            //    }
+            //}
+            //return false;
+        }
 
         protected PlayerControllerB GetClosestPlayer()
         {
@@ -312,10 +406,11 @@ namespace DuckMod.Behaviors
 
                 Vector3 pos = RoundManager.Instance.GetNavMeshPosition(item.transform.position);
 
-                if (item != null && item.GetComponent<PetDuckAI>() == null && RoundManager.Instance.GotNavMeshPositionResult && !item.isInShipRoom)
+                if (item != null && item.GetComponent<PetDuckAI>() == null && RoundManager.Instance.GotNavMeshPositionResult 
+                    && !item.isInShipRoom)
                 {
                     float dist = Vector3.Distance(base.transform.position, item.transform.position);
-                    if (dist <= nearest && item.grabbable && !item.isHeld)
+                    if (dist <= nearest && item.grabbable && !item.isHeld && IsInSight(item.transform))
                     {
                         nearest = dist;
                         targetItem = item;

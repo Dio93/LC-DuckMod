@@ -178,7 +178,7 @@ namespace DuckMod.Behaviors
         {
             mls.LogInfo("[Pet Duck] Noise position: " + noisePosition);
 
-            this.audioSource.Play();
+            this.audioQuacking.Play();
 
             if (base.IsOwner)
             {

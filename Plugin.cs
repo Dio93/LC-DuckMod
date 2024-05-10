@@ -42,15 +42,6 @@ namespace DuckMod
 
             PetDuckAI petDuckAI = petDuck.spawnPrefab.AddComponent<PetDuckAI>();
 
-            //Item shovel = Items.shopItems[2].item;
-
-            //mls.LogInfo("Shovel useAnim: " + shovel.useAnim);
-
-            //duckShovel.useAnim = shovel.useAnim;
-            //duckShovel.throwAnim = shovel.throwAnim;
-            //duckShovel.pocketAnim = shovel.pocketAnim;
-            //duckShovel.grabAnim = shovel.grabAnim;
-
             // Register shovel
 
             LethalLib.Modules.NetworkPrefabs.RegisterNetworkPrefab(duckShovel.spawnPrefab);
