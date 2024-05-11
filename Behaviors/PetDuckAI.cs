@@ -134,6 +134,11 @@ namespace DuckMod.Behaviors
                     break;
 
                 case PetState.MovingToItem:
+                    if (targetItem.isHeld)
+                    {
+                        this.targetItem = null;
+                        return;
+                    }
                     if (!GrabAndSync())
                     {
                         agent.SetDestination(this.targetItem.transform.position);
