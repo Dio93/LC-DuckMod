@@ -115,7 +115,14 @@ namespace DuckMod.Behaviors
                     {
                         if (Vector3.Distance(base.transform.position, this.targetPlayer.transform.position) > 3f)
                         {
-                            this.destination = this.targetPlayer.transform.position;
+                            if (mls != null)
+                            {
+                                mls.LogInfo("[Pet Duck] Walking towards " + this.targetPlayer.name);
+                            }
+
+                            Vector3 direction = (this.targetPlayer.transform.position - this.transform.position).normalized;
+
+                            this.destination = this.targetPlayer.transform.position - direction * 1.5f;
                         }
                         else
                         {
