@@ -499,9 +499,16 @@ namespace DuckMod.Behaviors
 
         public void Destroy()
         {
-            petAI = null;
             OnDying();
             this.networkObject.Despawn();
+        }
+
+        public override void OnDestroy()
+        {
+            if (petAI == this)
+            {
+                petAI = null;               
+            }
         }
 
         protected virtual void OnDying()
@@ -789,7 +796,6 @@ namespace DuckMod.Behaviors
                 }
             }
             
-            
             item.EnablePhysics(enable: true);
             item.fallTime = 0f;
             item.startFallingPosition = item.transform.parent.InverseTransformPoint(item.transform.position);
@@ -808,15 +814,11 @@ namespace DuckMod.Behaviors
             item.OnPlaceObject();
 
             this.grabbedItems.Remove(item);
+            this.grabbingCooldown = 10f;
         }
 
         protected void DropAndSync(GrabbableObject item)
         {
-            if(!base.IsOwner || item == null)
-            {
-                return;
-            }
-
             NetworkObject networkObject = item.GetComponent<NetworkObject>();
             if (networkObject == null)
             {
@@ -838,14 +840,14 @@ namespace DuckMod.Behaviors
             }
             if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
             {
-                if (base.OwnerClientId != networkManager.LocalClientId)
-                {
-                    if (networkManager.LogLevel <= Unity.Netcode.LogLevel.Normal)
-                    {
-                        Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-                    }
-                    return;
-                }
+                //if (base.OwnerClientId != networkManager.LocalClientId)
+                //{
+                //    if (networkManager.LogLevel <= Unity.Netcode.LogLevel.Normal)
+                //    {
+                //        Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
+                //    }
+                //    return;
+                //}
                 ServerRpcParams serverRpcParams = default(ServerRpcParams);
                 FastBufferWriter bufferWriter = __beginSendServerRpc(847487222u, serverRpcParams, RpcDelivery.Reliable);
                 bufferWriter.WriteValueSafe(in objectRef, default(FastBufferWriter.ForNetworkSerializable));
@@ -943,7 +945,6 @@ namespace DuckMod.Behaviors
                     mls.LogInfo("[Pet Duck] Duck got hit. Dropping Item.");
                 }
                 this.DropAndSync(this.grabbedItems[this.grabbedItems.Count - 1]);
-                this.grabbingCooldown = 10f;
             }
 
             return true;
@@ -1087,13 +1088,13 @@ namespace DuckMod.Behaviors
             {
                 return;
             }
-            if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-            {
-                if (networkManager.LogLevel <= Unity.Netcode.LogLevel.Normal)
-                {
-                    Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-                }
-            }
+            //if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
+            //{
+            //    if (networkManager.LogLevel <= Unity.Netcode.LogLevel.Normal)
+            //    {
+            //        Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
+            //    }
+            //}
             else
             {
                 reader.ReadValueSafe(out NetworkObjectReference value, default(FastBufferWriter.ForNetworkSerializable));

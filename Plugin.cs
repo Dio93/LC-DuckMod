@@ -35,7 +35,7 @@ namespace DuckMod
             string assetDir = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "duckmod");
             AssetBundle bundle = AssetBundle.LoadFromFile(assetDir);
 
-            Item duckShovel = bundle.LoadAsset<Item>("Assets/Items/DickShovel/DickShovelItem.asset");
+            //Item duckShovel = bundle.LoadAsset<Item>("Assets/Items/DickShovel/DickShovelItem.asset");
             Item petDuck = bundle.LoadAsset<Item>("Assets/Items/PetDuck/PetDuckItem.asset");
 
             PetDuckAI.mls = mls;
@@ -44,14 +44,14 @@ namespace DuckMod
 
             // Register shovel
 
-            LethalLib.Modules.NetworkPrefabs.RegisterNetworkPrefab(duckShovel.spawnPrefab);
-            Utilities.FixMixerGroups(duckShovel.spawnPrefab);
+            //LethalLib.Modules.NetworkPrefabs.RegisterNetworkPrefab(duckShovel.spawnPrefab);
+            //Utilities.FixMixerGroups(duckShovel.spawnPrefab);
 
-            TerminalNode shovelNode = ScriptableObject.CreateInstance<TerminalNode>();
-            shovelNode.clearPreviousText = true;
-            shovelNode.displayText = "A mighty shovel for ducks.\n\nPlease CONFIRM or DENY.\n\n";
+            //TerminalNode shovelNode = ScriptableObject.CreateInstance<TerminalNode>();
+            //shovelNode.clearPreviousText = true;
+            //shovelNode.displayText = "A mighty shovel for ducks.\n\nPlease CONFIRM or DENY.\n\n";
 
-            Items.RegisterShopItem(duckShovel, shovelNode, null, null, 25);
+            //Items.RegisterShopItem(duckShovel, shovelNode, null, null, 25);
 
             // Register petduck
 
