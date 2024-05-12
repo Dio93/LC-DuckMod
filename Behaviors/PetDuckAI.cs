@@ -170,22 +170,6 @@ namespace DuckMod.Behaviors
         //    }
         //}
 
-        override public bool Hit(int force, UnityEngine.Vector3 hitDirection, GameNetcodeStuff.PlayerControllerB playerWhoHit, bool playHitSFX, int hitID)
-        {
-            //int playerWhoHitID = -1;
-            //if (playerWhoHit != null)
-            //{
-            //    playerWhoHitID = (int)playerWhoHit.playerClientId;
-            //    AddHpServerRpc(force);
-            //}
-
-            //if (mls != null)
-            //{
-            //    mls.LogInfo("[Pet DUCK] Duck was hit :(\nHP:\t" + this.hp);
-            //}
-            return true;
-        }
-
         override public void DetectNoise(UnityEngine.Vector3 noisePosition, float noiseLoudness, int timesPlayedInOneSpot, int noiseID)
         {
             mls.LogInfo("[Pet Duck] Noise position: " + noisePosition);
