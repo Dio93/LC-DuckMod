@@ -12,8 +12,8 @@ namespace DuckMod
     [BepInPlugin(modGUID, modName, modVersion)]
     public class DuckMod : BaseUnityPlugin
     {
-        private const string modGUID = "SchanniBunni.DuckMod";
-        private const string modName = "Duck Mod";
+        private const string modGUID = "Dio93.DuckMod";
+        private const string modName = "DuckMod";
         private const string modVersion = "1.0.0.0";
 
         private readonly Harmony harmony = new Harmony(modGUID);
