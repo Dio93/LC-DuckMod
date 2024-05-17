@@ -78,6 +78,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Behaviors\CustomInteractable.cs" />
     <Compile Include="Behaviors\PetAI.cs" />
     <Compile Include="Behaviors\PetDuckAI.cs" />
     <Compile Include="Plugin.cs" />
