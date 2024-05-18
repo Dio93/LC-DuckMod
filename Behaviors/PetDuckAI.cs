@@ -72,7 +72,7 @@ namespace DuckMod.Behaviors
 
             this.targetPlayer = this.GetClosestPlayer();
 
-            if (this.grabbedItems.Count < this.maxGrabbedItems & this.targetItem == null)
+            if (this.grabbedItems.Count < this.itemCapacity & this.targetItem == null)
             {
                 this.targetItem = this.GetClosestItem();
                 if (mls != null && this.targetItem != null)

@@ -48,8 +48,9 @@ namespace DuckMod.Behaviors
         protected GrabbableObject targetItem;
         protected IList<GrabbableObject> grabbableItems = new List<GrabbableObject>();
         protected IList<GrabbableObject> grabbedItems = new List<GrabbableObject>();
-        protected int maxGrabbedItems = 1;
+        public int itemCapacity = 1;
 
+        public float speedFactor = 0.8f;
         private float nextSpeedCheck = 0f;
         private float nextSpeedCheckCooldown = 30f;
         protected PlayerControllerB targetPlayer;
@@ -155,7 +156,7 @@ namespace DuckMod.Behaviors
                     {
                         if (this.nextSpeedCheck <= 0)
                         {
-                            this.speed = targetPlayer.movementSpeed * 0.8f;
+                            this.speed = targetPlayer.movementSpeed * this.speedFactor;
                             this.nextSpeedCheck = this.nextSpeedCheckCooldown;
                         }
                         else
@@ -715,7 +716,7 @@ namespace DuckMod.Behaviors
             {
                 return false;
             }
-            if (targetItem != null && this.grabbedItems.Count < this.maxGrabbedItems && Vector3.Distance(base.transform.position, targetItem.transform.position) < 0.75f)
+            if (targetItem != null && this.grabbedItems.Count < this.itemCapacity && Vector3.Distance(base.transform.position, targetItem.transform.position) < 0.75f)
             {
                 NetworkObject networkObj = targetItem.GetComponent<NetworkObject>();
                 // SwitchToBehaviourStateOnLocalClient(1);
