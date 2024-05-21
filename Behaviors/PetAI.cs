@@ -74,23 +74,21 @@ namespace DuckMod.Behaviors
 
         public virtual void Start()
         {
-            if (petAI == null)
-            {
-                petAI = this;
-            }
-            else
-            {
-                Destroy(this.gameObject);
-                return;
-            }
+            //if (petAI == null)
+            //{
+            //    petAI = this;
+            //}
+            //else
+            //{
+            //    Destroy(this.gameObject);
+            //    return;
+            //}
 
             this.agent = GetComponent<NavMeshAgent>();
 
-            // Initialize enemy variables
-            this.agent.enabled = true;
             // this.agent.speed = 4.5f;
 
-            shipState = ShipState.InSpace;
+            shipState = StartOfRound.Instance.shipHasLanded ? ShipState.OnMoon : ShipState.InSpace;
 
             this.networkObject = GetComponent<NetworkObject>();
 
@@ -98,19 +96,13 @@ namespace DuckMod.Behaviors
             {
                 if (audioSource.clip.name == "duck_quacking")
                 {
-                    if (mls != null)
-                    {
-                        mls.LogInfo("[Pet Duck] Quacking Audio Clip found.");
-                    }
+                    Log("Quacking Audio Clip found.");
                     this.audioQuacking = audioSource;
                     this.audioQuacking.Play();
                 }
                 else if (audioSource.clip.name == "duck_walking")
                 {
-                    if (mls != null)
-                    {
-                        mls.LogInfo("[Pet Duck] Walking Audio Clip found.");
-                    }
+                    Log("Walking Audio Clip found.");
                     this.audioWalking = audioSource;
                 }
             }
@@ -134,10 +126,9 @@ namespace DuckMod.Behaviors
                 this.itemHolder = this.transform;
             }
 
-            this.agent.enabled = false;
-
             if (base.IsOwner)
             {
+                this.agent.enabled = IsOwner;
                 Init();
                 this.hp = this.maxHp;
                 SyncPosition();
@@ -173,12 +164,6 @@ namespace DuckMod.Behaviors
             else
             {
                 this.transform.position = Vector3.SmoothDamp(base.transform.position, serverPosition, ref tempVelocity, syncMovementSpeed);
-                if (tempVelocity.magnitude > 0.1f)
-                {
-                }
-                else
-                {
-                }
                 //base.transform.eulerAngles = new Vector3(base.transform.eulerAngles.x, Mathf.LerpAngle(base.transform.eulerAngles.y, targetYRotation, 15f * Time.deltaTime), base.transform.eulerAngles.z);
                 //base.transform.position = this.serverPosition;
                 this.transform.rotation = Quaternion.Euler(this.transform.rotation.eulerAngles.x, this.targetYRotation, this.transform.rotation.eulerAngles.z);
@@ -237,10 +222,7 @@ namespace DuckMod.Behaviors
                     if (StartOfRound.Instance.shipHasLanded)
                     {
                         shipState = ShipState.OnMoon;
-                        if (mls != null)
-                        {
-                            mls.LogInfo("[Pet Duck] Ship has landed!");
-                        }
+                        Log("Ship has landed!");
 
                         StartRound(IsOwner);
                     }
@@ -250,10 +232,7 @@ namespace DuckMod.Behaviors
                     if (StartOfRound.Instance.shipIsLeaving)
                     {
                         shipState = ShipState.InSpace;
-                        if (mls != null)
-                        {
-                            mls.LogInfo("[Pet Duck] Ship is leaving!");
-                        }
+                        Log("Ship is leaving!");
 
                         EndRound();
                     }
@@ -276,19 +255,13 @@ namespace DuckMod.Behaviors
         protected void EnterShip()
         {
             base.transform.SetParent(StartOfRound.Instance.elevatorTransform, true);
-            if (mls != null)
-            {
-                mls.LogInfo("[Pet Duck] Enters ship!");
-            }
+            Log("Enters ship!");
             OnEnterShip();
         }
 
         protected void LeaveShip()
         {
-            if (mls != null)
-            {
-                mls.LogInfo("[Pet Duck] Leaves ship!");
-            }
+            Log("Leaves ship!");
             base.transform.SetParent(null, true);
             OnLeaveShip();
         }
@@ -306,35 +279,23 @@ namespace DuckMod.Behaviors
                 {
                     if (dropShip != null && !item.isInShipRoom)
                     {
-                        if (mls != null)
-                        {
-                            mls.LogInfo("Drop ship: " + dropShip.name);
-                        }
+                        Log("Drop ship: " + dropShip.name);
                         if (Vector3.Distance(dropShip.transform.position, item.transform.position) <= 5f)
                         {
-                            if (mls != null)
-                            {
-                                mls.LogInfo("Skip Item: " + item.name);
-                            }
+                            Log("Skip Item: " + item.name);
                             continue;
                         }
                     }
                     this.grabbableItems.Add(item);
                 }
             }
-            if (mls != null)
-            {
-                mls.LogInfo("[Pet Duck] Start Round!");
-            }
+            Log("Start Round!");
             OnStartRound();
         }
 
         protected void EndRound()
         {
-            if (mls != null)
-            {
-                mls.LogInfo("[Pet Duck] End Round!");
-            }
+            Log("End Round!");
             this.freeze = true;
             this.agent.enabled = false;
             this.physicsProp.enabled = true;
@@ -349,29 +310,9 @@ namespace DuckMod.Behaviors
         protected bool IsInSight(Transform target)
         {
             //Ray ray = new Ray(this.transform.position, target.position - this.transform.position);
-            bool isInSight = Physics.Linecast(this.itemHolder.position, target.position, StartOfRound.Instance.collidersAndRoomMaskAndDefault);
-            if (mls != null)
-            {
-                //mls.LogInfo(target.name + " " + isInSight);
-            }
+            bool isInSight = Physics.Linecast(this.itemHolder.position, target.position, StartOfRound.Instance.collidersAndRoomMask);
+
             return !isInSight;
-            //RaycastHit[] hits = Physics.RaycastAll(ray);
-            //foreach(RaycastHit hit in hits)
-            //{
-            //    if (hit.collider.GetComponent<PetAI>() != null)
-            //    {
-            //        continue;
-            //    }
-            //    else if (hit.collider.transform == target)
-            //    {
-            //        return true;
-            //    }
-            //    else
-            //    {
-            //        return false;
-            //    }
-            //}
-            //return false;
         }
 
         protected PlayerControllerB GetClosestPlayer()
@@ -421,10 +362,7 @@ namespace DuckMod.Behaviors
             float nearest = 10f;
             foreach (GrabbableObject item in this.grabbableItems)
             {
-                if (mls != null)
-                {
-                    //mls.LogInfo("[Pet Duck] tmp item: " + item.name);
-                }
+                //Log("tmp item: " + item.name);
 
                 Vector3 pos = RoundManager.Instance.GetNavMeshPosition(item.transform.position);
 
@@ -478,10 +416,7 @@ namespace DuckMod.Behaviors
                 this.agent.SetDestination(nextEntrance);
                 return;
             }
-            if (mls != null)
-            {
-                mls.LogInfo("[Pet Duck] Duck is teleporting");
-            }
+            Log("Duck is teleporting");
             nextEntrance = RoundManager.Instance.GetNavMeshPosition(nextEntrance);
             targetEntrance = RoundManager.Instance.GetNavMeshPosition(targetEntrance);
             this.agent.enabled = false;
@@ -695,10 +630,7 @@ namespace DuckMod.Behaviors
 
         protected void GrabItem(NetworkObject networkObject)
         {
-            if (mls != null)
-            {
-                mls.LogInfo("[Pet Duck] Grabbing " + networkObject.name);
-            }
+            Log("Grabbing " + networkObject.name);
             GrabbableObject item = networkObject.GetComponent<GrabbableObject>();
             this.grabbedItems.Add(item);
             this.targetItem = null;
@@ -789,10 +721,7 @@ namespace DuckMod.Behaviors
 
         protected void DropItem(NetworkObject networkObject)
         {
-            if (mls != null)
-            {
-                mls.LogInfo("[Pet Duck] Dropping " + networkObject.name);
-            }
+            Log("Dropping " + networkObject.name);
             GrabbableObject item = networkObject.GetComponent<GrabbableObject>();
 
             item.parentObject = null;
@@ -1106,10 +1035,7 @@ namespace DuckMod.Behaviors
         {
             if (this.grabbedItems.Count > 0)
             {
-                if (mls != null)
-                {
-                    mls.LogInfo("[Pet Duck] Duck got hit. Dropping Item.");
-                }
+                Log("Duck got hit. Dropping Item.");
                 // this.DropAndSync(this.grabbedItems[this.grabbedItems.Count - 1]);
             }
 
@@ -1397,5 +1323,13 @@ namespace DuckMod.Behaviors
         //        ((PetAI)target).__rpc_exec_stage = __RpcExecStage.None;
         //    }
         //}
+
+        public virtual void Log(string message)
+        {
+            if (mls != null)
+            {
+                mls.LogInfo("[PetAI] " + message);
+            }
+        }
     }
 }

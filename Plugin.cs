@@ -23,6 +23,7 @@ namespace DuckMod
 
         internal ManualLogSource mls;
 
+        private ConfigEntry<bool> configDebug;
         private ConfigEntry<int> configCarryAmount;
         private ConfigEntry<int> configDuckPrice;
         private ConfigEntry<float> configSpeed;
@@ -34,24 +35,13 @@ namespace DuckMod
                 instance = this;
             }
 
-            mls = BepInEx.Logging.Logger.CreateLogSource(modGUID);
-
-            string path = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-
-            PetAI.InitializeRPCS_PetAI();
-
-
-            string assetDir = Path.Combine(path, "duckmod");
-            AssetBundle bundle = AssetBundle.LoadFromFile(assetDir);
-
-            Item petDuck = bundle.LoadAsset<Item>("Assets/Items/PetDuck/PetDuckItem.asset");
-
-            PetDuckAI.mls = mls;
-
-            PetDuckAI petDuckAI = petDuck.spawnPrefab.AddComponent<PetDuckAI>();
-            int duckPrice = 0;
-
             // load settings
+            configDebug = Config.Bind("General",
+                                    "Debugging",
+                                    false,
+                                    "Logging in Console"
+                                    );
+
             configDuckPrice = Config.Bind("Duck",
                                           "Duck Price",
                                           0,
@@ -67,11 +57,29 @@ namespace DuckMod
                                       0.8f,
                                       "The speed of the duck proportional to the player");
 
+            mls = configDebug.Value ? BepInEx.Logging.Logger.CreateLogSource(modGUID) : null;
+            PetAI.mls = mls;
+
+            PetAI.InitializeRPCS_PetAI();
+
+            // load assets
+            string path = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            string assetDir = Path.Combine(path, "duckmod");
+            AssetBundle bundle = AssetBundle.LoadFromFile(assetDir);
+
+            Item petDuck = bundle.LoadAsset<Item>("Assets/Items/PetDuck/PetDuckItem.asset");
+            PetDuckAI petDuckAI = petDuck.spawnPrefab.AddComponent<PetDuckAI>();
             petDuckAI.itemCapacity = configCarryAmount.Value;
             petDuckAI.speedFactor = configSpeed.Value;
-            duckPrice = configDuckPrice.Value;
 
-            // Register petduck
+            Item petDuckHat = bundle.LoadAsset<Item>("Assets/Items/PetDuck/PetDuckHatItem.asset");
+            PetDuckAI petDuckHatAI = petDuckHat.spawnPrefab.AddComponent <PetDuckAI>();
+            petDuckHatAI.itemCapacity = configCarryAmount.Value;
+            petDuckHatAI.speedFactor = configSpeed.Value;
+
+            int duckPrice = configDuckPrice.Value;
+
+            // Register pet duck
 
             LethalLib.Modules.NetworkPrefabs.RegisterNetworkPrefab(petDuck.spawnPrefab);
             Utilities.FixMixerGroups(petDuck.spawnPrefab);
@@ -84,11 +92,24 @@ namespace DuckMod
 
             Items.RegisterShopItem(petDuck, duckNode, null, null, duckPrice);
 
-            mls.LogInfo("The duck shovel mod has awaken :)");
-            foreach(Items.PlainItem each in Items.plainItems)
-            {
-                mls.LogInfo(each.item.itemName);
-            }
+            // Register pet duck with hat
+
+            LethalLib.Modules.NetworkPrefabs.RegisterNetworkPrefab(petDuckHat.spawnPrefab);
+            Utilities.FixMixerGroups(petDuckHat.spawnPrefab);
+
+            TerminalNode duckHatNode = ScriptableObject.CreateInstance<TerminalNode>();
+            duckHatNode.clearPreviousText = true;
+            duckHatNode.displayText = "You have requested to order mighty pet ducks with hats. Amount: [variableAmount]." +
+                "\nTotal cost of items: [totalCost]" +
+                "\n\nPlease CONFIRM or DENY.\n\n";
+
+            Items.RegisterShopItem(petDuckHat, duckHatNode, null, null, duckPrice);
+
+            mls.LogInfo("The duck mod has awaken :)");
+            //foreach(Items.PlainItem each in Items.plainItems)
+            //{
+            //    mls.LogInfo(each.item.itemName);
+            //}
 
             harmony.PatchAll(typeof(DuckMod));
         }

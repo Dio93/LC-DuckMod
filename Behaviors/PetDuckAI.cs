@@ -29,23 +29,15 @@ namespace DuckMod.Behaviors
         {
             base.Start();
 
-            if (mls != null)
-            {
-                mls.LogInfo("[Pet Duck] Is pet duck owner: " + base.IsOwner);
-                mls.LogInfo("[Pet Duck] Speed: " + this.agent.speed);
-                mls.LogInfo("[Pet Duck] Velocity: " + this.agent.velocity);
-                mls.LogInfo("[Pet Duck] Acceleration: " + this.agent.acceleration);
-            }
+            Log("Is pet duck owner: " + base.IsOwner +
+            "\nSpeed: " + this.agent.speed +
+            "\nVelocity: " + this.agent.velocity +
+            "\nAcceleration: " + this.agent.acceleration);
         }
 
         override public void Update()
         {
             base.Update();
-
-            if (mls != null)
-            {
-                mls.LogInfo("[Pet Duck] Duck is in idle");
-            }
 
             if (this.nextFlip <= 0)
             {
@@ -75,9 +67,9 @@ namespace DuckMod.Behaviors
             if (this.grabbedItems.Count < this.itemCapacity & this.targetItem == null)
             {
                 this.targetItem = this.GetClosestItem();
-                if (mls != null && this.targetItem != null)
+                if (this.targetItem != null)
                 {
-                    //mls.LogInfo("[Pet Duck] Target item: " + this.targetItem.name);
+                    //Log("Target item: " + this.targetItem.name);
                 }
             }
 
@@ -123,10 +115,7 @@ namespace DuckMod.Behaviors
                     {
                         if (Vector3.Distance(base.transform.position, this.targetPlayer.transform.position) > 3f)
                         {
-                            if (mls != null)
-                            {
-                                mls.LogInfo("[Pet Duck] Walking towards " + this.targetPlayer.name);
-                            }
+                            Log("Walking towards " + this.targetPlayer.name);
 
                             Vector3 direction = (this.targetPlayer.transform.position - this.transform.position).normalized;
 
@@ -184,7 +173,7 @@ namespace DuckMod.Behaviors
 
         override public void DetectNoise(UnityEngine.Vector3 noisePosition, float noiseLoudness, int timesPlayedInOneSpot, int noiseID)
         {
-            mls.LogInfo("[Pet Duck] Noise position: " + noisePosition);
+            Log("Noise position: " + noisePosition);
 
             this.audioQuacking.Play();
 
@@ -269,5 +258,13 @@ namespace DuckMod.Behaviors
         //        ((PetAI)target).__rpc_exec_stage = __RpcExecStage.None;
         //    }
         //}
+
+        public override void Log(string message)
+        {
+            if (mls != null)
+            {
+                mls.LogInfo("[Pet Duck] " + message);
+            }
+        }
     }
 }
