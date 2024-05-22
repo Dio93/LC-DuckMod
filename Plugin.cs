@@ -27,6 +27,9 @@ namespace DuckMod
         private ConfigEntry<int> configCarryAmount;
         private ConfigEntry<int> configDuckPrice;
         private ConfigEntry<float> configSpeed;
+        private ConfigEntry<bool> configHittable;
+        private ConfigEntry<int> configHp;
+
 
         void Awake()
         {
@@ -57,6 +60,16 @@ namespace DuckMod
                                       0.8f,
                                       "The speed of the duck proportional to the player");
 
+            configHittable = Config.Bind("Duck",
+                                         "Hittable",
+                                         false,
+                                         "If the duck is hittable");
+
+            configHp = Config.Bind("Duck",
+                                   "Hp",
+                                   10,
+                                   "Health points of the duck");
+
             mls = configDebug.Value ? BepInEx.Logging.Logger.CreateLogSource(modGUID) : null;
             PetAI.mls = mls;
 
@@ -71,11 +84,16 @@ namespace DuckMod
             PetDuckAI petDuckAI = petDuck.spawnPrefab.AddComponent<PetDuckAI>();
             petDuckAI.itemCapacity = configCarryAmount.Value;
             petDuckAI.speedFactor = configSpeed.Value;
+            petDuckAI.hittable = configHittable.Value;
+            petDuckAI.maxHp = configHp.Value;
 
             Item petDuckHat = bundle.LoadAsset<Item>("Assets/Items/PetDuck/PetDuckHatItem.asset");
             PetDuckAI petDuckHatAI = petDuckHat.spawnPrefab.AddComponent <PetDuckAI>();
             petDuckHatAI.itemCapacity = configCarryAmount.Value;
             petDuckHatAI.speedFactor = configSpeed.Value;
+            petDuckHatAI.hittable = configHittable.Value;
+            petDuckHatAI.maxHp = configHp.Value;
+
 
             int duckPrice = configDuckPrice.Value;
 

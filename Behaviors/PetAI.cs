@@ -34,8 +34,9 @@ namespace DuckMod.Behaviors
         protected Transform interactPatter;
         protected InteractTrigger interactTrigger;
 
-        protected int maxHp = 10;
+        public int maxHp = 10;
         protected int hp;
+        public bool hittable;
         protected bool isInsideShip;
         protected bool isInFactory;
 
@@ -84,6 +85,7 @@ namespace DuckMod.Behaviors
             //    return;
             //}
 
+            this.hp = this.maxHp;
             this.agent = GetComponent<NavMeshAgent>();
 
             // this.agent.speed = 4.5f;
@@ -130,7 +132,6 @@ namespace DuckMod.Behaviors
             {
                 this.agent.enabled = IsOwner;
                 Init();
-                this.hp = this.maxHp;
                 SyncPosition();
                 SyncRotation();
             }
@@ -941,18 +942,8 @@ namespace DuckMod.Behaviors
             }
             if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
             {
-                //if (base.OwnerClientId != networkManager.LocalClientId)
-                //{
-                //    if (networkManager.LogLevel <= Unity.Netcode.LogLevel.Normal)
-                //    {
-                //        Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-                //    }
-                //    return;
-                //}
-
                 ServerRpcParams serverRpcParams = default(ServerRpcParams);
                 FastBufferWriter bufferWriter = __beginSendServerRpc(2358561456u, serverRpcParams, RpcDelivery.Reliable);
-                //BytePacker.WriteValuePacked(bufferWriter, speed);
                 __endSendServerRpc(ref bufferWriter, 2358561456u, serverRpcParams, RpcDelivery.Reliable);
             }
             if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
@@ -983,63 +974,68 @@ namespace DuckMod.Behaviors
         }
 
         // =====================================================================================================================
+        public virtual void OnHit(int force) 
+        {
+            if (hittable)
+            {
+                AddHP(-force);
+            }
+        }
 
-        //[ServerRpc(RequireOwnership = false)]
-        //public void AddHpServerRpc(int force)
-        //{
-        //    NetworkManager networkManager = base.NetworkManager;
-        //    if ((object)networkManager != null && networkManager.IsListening)
-        //    {
-        //        if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-        //        {
-        //            ServerRpcParams serverRpcParams = default(ServerRpcParams);
-        //            FastBufferWriter bufferWriter = __beginSendServerRpc(3538577804u, serverRpcParams, RpcDelivery.Reliable);
-        //            BytePacker.WriteValueBitPacked(bufferWriter, force);
-        //            __endSendServerRpc(ref bufferWriter, 3538577804u, serverRpcParams, RpcDelivery.Reliable);
-        //        }
-        //        if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-        //        {
-        //            AddHpClientRpc(force);
-        //        }
-        //    }
-        //}
+        public bool Hit(int force, Vector3 hitDirection, PlayerControllerB playerWhoHit = null, bool playHitSFX = false, int hitID = -1)
+        {
+            Log("Duck got hit.");
+            HitServerRpc(force);
 
-        //[ClientRpc]
-        //public void AddHpClientRpc(int force)
-        //{
-        //    NetworkManager networkManager = base.NetworkManager;
-        //    if ((object)networkManager == null || !networkManager.IsListening)
-        //    {
-        //        return;
-        //    }
-        //    if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-        //    {
-        //        ClientRpcParams clientRpcParams = default(ClientRpcParams);
-        //        FastBufferWriter bufferWriter = __beginSendClientRpc(601871377u, clientRpcParams, RpcDelivery.Reliable);
-        //        BytePacker.WriteValueBitPacked(bufferWriter, force);
-        //        __endSendClientRpc(ref bufferWriter, 601871377u, clientRpcParams, RpcDelivery.Reliable);
-        //    }
-        //    if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-        //    {
-        //        AddHP(-force);
-        //    }
-        //}
+            return true;
+        }
+
+        [ServerRpc(RequireOwnership = false)]
+        public void HitServerRpc(int force)
+        {
+            NetworkManager networkManager = base.NetworkManager;
+            if ((object)networkManager != null && networkManager.IsListening)
+            {
+                if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
+                {
+                    ServerRpcParams serverRpcParams = default(ServerRpcParams);
+                    FastBufferWriter bufferWriter = __beginSendServerRpc(847487300u, serverRpcParams, RpcDelivery.Reliable);
+                    BytePacker.WriteValueBitPacked(bufferWriter, force);
+                    __endSendServerRpc(ref bufferWriter, 847487300u, serverRpcParams, RpcDelivery.Reliable);
+                }
+                if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
+                {
+                    HitClientRpc(force);
+                }
+            }
+        }
+
+        [ClientRpc]
+        public void HitClientRpc(int force)
+        {
+            NetworkManager networkManager = base.NetworkManager;
+            if ((object)networkManager == null || !networkManager.IsListening)
+            {
+                return;
+            }
+            if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
+            {
+                ClientRpcParams clientRpcParams = default(ClientRpcParams);
+                FastBufferWriter bufferWriter = __beginSendClientRpc(847487301u, clientRpcParams, RpcDelivery.Reliable);
+                BytePacker.WriteValueBitPacked(bufferWriter, force);
+                __endSendClientRpc(ref bufferWriter, 847487301u, clientRpcParams, RpcDelivery.Reliable);
+            }
+            if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
+            {
+                OnHit(force);
+            }
+        }
 
         // =====================================================================================================================
 
         public virtual void DetectNoise(Vector3 noisePosition, float noiseLoudness, int timesPlayedInOneSpot, int noiseID)
         {
-        }
 
-        public virtual bool Hit(int force, Vector3 hitDirection, PlayerControllerB playerWhoHit = null, bool playHitSFX = false, int hitID = -1)
-        {
-            if (this.grabbedItems.Count > 0)
-            {
-                Log("Duck got hit. Dropping Item.");
-                // this.DropAndSync(this.grabbedItems[this.grabbedItems.Count - 1]);
-            }
-
-            return true;
         }
 
         public virtual void Interact(PlayerControllerB player)
@@ -1070,7 +1066,8 @@ namespace DuckMod.Behaviors
             NetworkManager.__rpc_func_table.Add(847487229u, __rpc_handler_847487229);
             NetworkManager.__rpc_func_table.Add(2358561456u, __rpc_handler_2358561456);
             NetworkManager.__rpc_func_table.Add(847487227u, __rpc_handler_847487227);
-            //NetworkManager.__rpc_func_table.Add(1031891902u, __rpc_handler_1031891902);
+            NetworkManager.__rpc_func_table.Add(847487300u, __rpc_handler_847487300);
+            NetworkManager.__rpc_func_table.Add(847487301u, __rpc_handler_847487301);
         }
 
         // UpdatePositionServerRpc
@@ -1261,13 +1258,6 @@ namespace DuckMod.Behaviors
             {
                 return;
             }
-            //if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-            //{
-            //    if (networkManager.LogLevel <= Unity.Netcode.LogLevel.Normal)
-            //    {
-            //        Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-            //    }
-            //}
             else
             {
                 ((PetAI)target).__rpc_exec_stage = __RpcExecStage.Server;
@@ -1287,42 +1277,36 @@ namespace DuckMod.Behaviors
                 ((PetAI)target).__rpc_exec_stage = __RpcExecStage.None;
             }
         }
-        //// AddHpServerRpc
-        //private static void __rpc_handler_847487222(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-        //{
-        //    NetworkManager networkManager = target.NetworkManager;
-        //    if ((object)networkManager == null || !networkManager.IsListening)
-        //    {
-        //        return;
-        //    }
-        //    if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-        //    {
-        //        if (networkManager.LogLevel <= Unity.Netcode.LogLevel.Normal)
-        //        {
-        //            Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-        //        }
-        //    }
-        //    else
-        //    {
-        //        ByteUnpacker.ReadValueBitPacked(reader, out int value);
-        //        ((PetAI)target).__rpc_exec_stage = __RpcExecStage.Server;
-        //        ((PetAI)target).AddHpServerRpc(value);
-        //        ((PetAI)target).__rpc_exec_stage = __RpcExecStage.None;
-        //    }
-        //}
 
-        //// AddHpClientRpc
-        //private static void __rpc_handler_847487223(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-        //{
-        //    NetworkManager networkManager = target.NetworkManager;
-        //    if ((object)networkManager != null && networkManager.IsListening)
-        //    {
-        //        ByteUnpacker.ReadValueBitPacked(reader, out int value);
-        //        ((PetAI)target).__rpc_exec_stage = __RpcExecStage.Client;
-        //        ((PetAI)target).AddHP(value);
-        //        ((PetAI)target).__rpc_exec_stage = __RpcExecStage.None;
-        //    }
-        //}
+        // HitServerRpc
+        private static void __rpc_handler_847487300(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
+        {
+            NetworkManager networkManager = target.NetworkManager;
+            if ((object)networkManager == null || !networkManager.IsListening)
+            {
+                return;
+            }
+            else
+            {
+                ByteUnpacker.ReadValueBitPacked(reader, out int value);
+                ((PetAI)target).__rpc_exec_stage = __RpcExecStage.Server;
+                ((PetAI)target).HitServerRpc(value);
+                ((PetAI)target).__rpc_exec_stage = __RpcExecStage.None;
+            }
+        }
+
+        // HitClientRpc
+        private static void __rpc_handler_847487301(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
+        {
+            NetworkManager networkManager = target.NetworkManager;
+            if ((object)networkManager != null && networkManager.IsListening)
+            {
+                ByteUnpacker.ReadValueBitPacked(reader, out int value);
+                ((PetAI)target).__rpc_exec_stage = __RpcExecStage.Client;
+                ((PetAI)target).HitClientRpc(value);
+                ((PetAI)target).__rpc_exec_stage = __RpcExecStage.None;
+            }
+        }
 
         public virtual void Log(string message)
         {
