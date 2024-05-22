@@ -56,7 +56,7 @@ namespace DuckMod.Behaviors
         private float nextSpeedCheckCooldown = 30f;
         protected PlayerControllerB targetPlayer;
         protected Vector3 destination;
-        protected float minPlayerDist = 5f;
+        protected float minPlayerDist = 4f;
         protected float maxPlayerDist = Mathf.Infinity;
 
         protected RaycastHit[] hits;

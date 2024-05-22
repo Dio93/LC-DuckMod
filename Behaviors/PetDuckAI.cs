@@ -108,6 +108,7 @@ namespace DuckMod.Behaviors
             switch (this.duckState)
             {
                 case DuckState.LookingAround:
+                    this.agent.destination = this.transform.position;
                     break;
 
                 case DuckState.Following:

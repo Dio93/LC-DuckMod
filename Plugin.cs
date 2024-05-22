@@ -42,7 +42,7 @@ namespace DuckMod
             configDebug = Config.Bind("General",
                                     "Debugging",
                                     false,
-                                    "Logging in Console"
+                                    "Enable logging in Console?"
                                     );
 
             configDuckPrice = Config.Bind("Duck",
@@ -63,15 +63,15 @@ namespace DuckMod
             configHittable = Config.Bind("Duck",
                                          "Hittable",
                                          false,
-                                         "If the duck is hittable");
+                                         "Is the duck hittable");
 
             configHp = Config.Bind("Duck",
                                    "Hp",
                                    10,
                                    "Health points of the duck");
 
-            mls = configDebug.Value ? BepInEx.Logging.Logger.CreateLogSource(modGUID) : null;
-            PetAI.mls = mls;
+            mls = BepInEx.Logging.Logger.CreateLogSource(modGUID);
+            PetAI.mls = configDebug.Value ? mls : null;
 
             PetAI.InitializeRPCS_PetAI();
 
@@ -93,7 +93,6 @@ namespace DuckMod
             petDuckHatAI.speedFactor = configSpeed.Value;
             petDuckHatAI.hittable = configHittable.Value;
             petDuckHatAI.maxHp = configHp.Value;
-
 
             int duckPrice = configDuckPrice.Value;
 
@@ -117,7 +116,7 @@ namespace DuckMod
 
             TerminalNode duckHatNode = ScriptableObject.CreateInstance<TerminalNode>();
             duckHatNode.clearPreviousText = true;
-            duckHatNode.displayText = "You have requested to order mighty pet ducks with hats. Amount: [variableAmount]." +
+            duckHatNode.displayText = "You have requested to order gentle ducks with hats. Amount: [variableAmount]." +
                 "\nTotal cost of items: [totalCost]" +
                 "\n\nPlease CONFIRM or DENY.\n\n";
 
