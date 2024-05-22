@@ -43,13 +43,16 @@ namespace DuckMod.Behaviors
         protected float checkEnemyCooldown = 10;
         protected float lastCheckEnemy = -1f;
 
-        protected static ShipState shipState;
+        protected ShipState shipState;
 
-        protected float grabbingCooldown = 0f;
+        protected static ItemDropship dropShip;
+        protected static float grabbingCooldown = 0f;
         protected GrabbableObject targetItem;
-        protected IList<GrabbableObject> grabbableItems = new List<GrabbableObject>();
+        protected static IList<GrabbableObject> grabbableItems = new List<GrabbableObject>();
         protected IList<GrabbableObject> grabbedItems = new List<GrabbableObject>();
         public int itemCapacity = 1;
+        protected static float nextItemCheck = 0f;
+        protected static float nextItemCheckCooldown = 10f;
 
         public float speedFactor = 0.8f;
         private float nextSpeedCheck = 0f;
@@ -84,6 +87,8 @@ namespace DuckMod.Behaviors
             //    Destroy(this.gameObject);
             //    return;
             //}
+
+            dropShip = FindObjectOfType<ItemDropship>();
 
             this.hp = this.maxHp;
             this.agent = GetComponent<NavMeshAgent>();
@@ -130,7 +135,7 @@ namespace DuckMod.Behaviors
 
             if (base.IsOwner)
             {
-                this.agent.enabled = IsOwner;
+                this.agent.enabled = shipState == ShipState.OnMoon;
                 Init();
                 SyncPosition();
                 SyncRotation();
@@ -144,6 +149,13 @@ namespace DuckMod.Behaviors
             {
                 if (this.agent.enabled)
                 {
+                    nextItemCheck -= Time.deltaTime;
+
+                    if (nextItemCheck <= 0)
+                    {
+                        UpdateGrabbableItems();
+                    }
+
                     if (this.targetPlayer != null)
                     {
                         if (this.nextSpeedCheck <= 0)
@@ -164,9 +176,9 @@ namespace DuckMod.Behaviors
             }
             else
             {
-                this.transform.position = Vector3.SmoothDamp(base.transform.position, serverPosition, ref tempVelocity, syncMovementSpeed);
+                //this.transform.position = Vector3.SmoothDamp(base.transform.position, serverPosition, ref tempVelocity, syncMovementSpeed);
                 //base.transform.eulerAngles = new Vector3(base.transform.eulerAngles.x, Mathf.LerpAngle(base.transform.eulerAngles.y, targetYRotation, 15f * Time.deltaTime), base.transform.eulerAngles.z);
-                //base.transform.position = this.serverPosition;
+                base.transform.position = this.serverPosition;
                 this.transform.rotation = Quaternion.Euler(this.transform.rotation.eulerAngles.x, this.targetYRotation, this.transform.rotation.eulerAngles.z);
             }
 
@@ -212,7 +224,8 @@ namespace DuckMod.Behaviors
 
         protected void Init()
         {
-            this.grabbingCooldown -= Time.deltaTime;
+            grabbingCooldown -= Time.deltaTime;
+
             this.UpdateCollisions();
             this.isInsideShip = this.IsInsideShip();
             this.agent.speed = this.speed;
@@ -272,24 +285,7 @@ namespace DuckMod.Behaviors
             this.freeze = false;
             this.agent.enabled = enableAgent;
             this.physicsProp.enabled = false;
-            this.grabbableItems.Clear();
-            ItemDropship dropShip = FindObjectOfType<ItemDropship>();
-            foreach (GrabbableObject item in FindObjectsOfType<GrabbableObject>())
-            {
-                if (item.GetComponent<PetAI>() == null) 
-                {
-                    if (dropShip != null && !item.isInShipRoom)
-                    {
-                        Log("Drop ship: " + dropShip.name);
-                        if (Vector3.Distance(dropShip.transform.position, item.transform.position) <= 5f)
-                        {
-                            Log("Skip Item: " + item.name);
-                            continue;
-                        }
-                    }
-                    this.grabbableItems.Add(item);
-                }
-            }
+            dropShip = FindObjectOfType<ItemDropship>();
             Log("Start Round!");
             OnStartRound();
         }
@@ -334,6 +330,29 @@ namespace DuckMod.Behaviors
             return closestPlayer;
         }
 
+        public void UpdateGrabbableItems()
+        {
+            nextItemCheck = nextItemCheckCooldown;
+
+            grabbableItems.Clear();
+            foreach (GrabbableObject item in FindObjectsOfType<GrabbableObject>())
+            {
+                if (item.GetComponent<PetAI>() == null)
+                {
+                    if (dropShip != null && !item.isInShipRoom)
+                    {
+                        Log("Drop ship: " + dropShip.name);
+                        if (Vector3.Distance(dropShip.transform.position, item.transform.position) <= 5f)
+                        {
+                            Log("Skip Item: " + item.name);
+                            continue;
+                        }
+                    }
+                    grabbableItems.Add(item);
+                }
+            }
+        }
+
         public void UpdateCollisions()
         {
             this.hits = Physics.BoxCastAll(base.transform.position, Vector3.one * 2f, base.transform.forward, base.transform.rotation, 10f);
@@ -354,14 +373,14 @@ namespace DuckMod.Behaviors
 
         protected GrabbableObject GetClosestItem()
         {
-            if (this.grabbingCooldown > 0)
+            if (grabbingCooldown > 0)
             {
                 return null;
             }
             GrabbableObject targetItem = null;
 
             float nearest = 10f;
-            foreach (GrabbableObject item in this.grabbableItems)
+            foreach (GrabbableObject item in grabbableItems)
             {
                 //Log("tmp item: " + item.name);
 
@@ -767,7 +786,7 @@ namespace DuckMod.Behaviors
             item.OnPlaceObject();
 
             this.grabbedItems.Remove(item);
-            this.grabbingCooldown = 5f;
+            grabbingCooldown = 5f;
             if (this.grabbedItems.Count == 0)
             {
                 this.interactTrigger.interactable = false;

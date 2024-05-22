@@ -116,7 +116,7 @@ namespace DuckMod.Behaviors
                     {
                         if (Vector3.Distance(base.transform.position, this.targetPlayer.transform.position) > 3f)
                         {
-                            Log("Walking towards " + this.targetPlayer.name);
+                            //Log("Walking towards " + this.targetPlayer.name);
 
                             Vector3 direction = (this.targetPlayer.transform.position - this.transform.position).normalized;
 
