@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.AI;
@@ -18,10 +19,13 @@ namespace DuckMod.Behaviors
         private static PetAI petAI;
         public enum ShipState
         {
+            None,
             InSpace,
             OnMoon
         }
 
+        public static int maxPets;
+        public static int petCount;
         public static ManualLogSource mls;
 
         protected NavMeshAgent agent;
@@ -34,6 +38,7 @@ namespace DuckMod.Behaviors
         protected Transform interactPatter;
         protected InteractTrigger interactTrigger;
 
+        private float scrapValue;
         public int maxHp = 10;
         protected int hp;
         public bool hittable;
@@ -78,6 +83,12 @@ namespace DuckMod.Behaviors
 
         public virtual void Start()
         {
+            if (petCount >= maxPets && maxPets > -1)
+            {
+                Destroy(this.gameObject);
+            }
+
+            petCount++;
             //if (petAI == null)
             //{
             //    petAI = this;
@@ -94,8 +105,6 @@ namespace DuckMod.Behaviors
             this.agent = GetComponent<NavMeshAgent>();
 
             // this.agent.speed = 4.5f;
-
-            shipState = StartOfRound.Instance.shipHasLanded ? ShipState.OnMoon : ShipState.InSpace;
 
             this.networkObject = GetComponent<NetworkObject>();
 
@@ -116,6 +125,8 @@ namespace DuckMod.Behaviors
 
             this.audioQuacking = GetComponent<AudioSource>();
             this.physicsProp = GetComponent<PhysicsProp>();
+            physicsProp.EnablePhysics(false);
+            physicsProp.isHeld = true;
             this.animator = GetComponentInChildren<Animator>();
             this.itemHolder = transform.GetChild(1);
 
@@ -135,7 +146,6 @@ namespace DuckMod.Behaviors
 
             if (base.IsOwner)
             {
-                this.agent.enabled = shipState == ShipState.OnMoon;
                 Init();
                 SyncPosition();
                 SyncRotation();
@@ -178,20 +188,14 @@ namespace DuckMod.Behaviors
             {
                 //this.transform.position = Vector3.SmoothDamp(base.transform.position, serverPosition, ref tempVelocity, syncMovementSpeed);
                 //base.transform.eulerAngles = new Vector3(base.transform.eulerAngles.x, Mathf.LerpAngle(base.transform.eulerAngles.y, targetYRotation, 15f * Time.deltaTime), base.transform.eulerAngles.z);
-                base.transform.position = this.serverPosition;
+                //base.transform.position = this.serverPosition;
+                Vector3 oldPos = base.transform.position;
+                float t = 1f;
+                base.transform.position = new Vector3(
+                    Mathf.Lerp(oldPos.x, serverPosition.x, t), 
+                    Mathf.Lerp(oldPos.y, serverPosition.y, t), 
+                    Mathf.Lerp(oldPos.z, serverPosition.z, t));
                 this.transform.rotation = Quaternion.Euler(this.transform.rotation.eulerAngles.x, this.targetYRotation, this.transform.rotation.eulerAngles.z);
-            }
-
-            // check for enemies
-            if (Time.time - this.lastCheckEnemy >= this.checkEnemyCooldown)
-            {
-                this.lastCheckEnemy = Time.time;
-
-                if (this.CheckForEnemies())
-                {
-                    this.StartQuacking();
-                    this.lastCheckEnemy = Time.time + 10;
-                }
             }
         }
 
@@ -224,14 +228,26 @@ namespace DuckMod.Behaviors
 
         protected void Init()
         {
-            grabbingCooldown -= Time.deltaTime;
-
-            this.UpdateCollisions();
-            this.isInsideShip = this.IsInsideShip();
-            this.agent.speed = this.speed;
-
             switch (shipState)
             {
+                case ShipState.None:
+                    if (StartOfRound.Instance.shipHasLanded)
+                    {
+                        shipState = ShipState.OnMoon;
+                        Log("Init on Moon!");
+
+                        StartRound(IsOwner);
+                    }
+                    else
+                    {
+                        isInsideShip = true;
+                        shipState = ShipState.InSpace;
+                        Log("Init in space!");
+
+                        EndRound();
+                    }
+                    break;
+
                 case ShipState.InSpace:
                     if (StartOfRound.Instance.shipHasLanded)
                     {
@@ -255,6 +271,12 @@ namespace DuckMod.Behaviors
 
             if (!freeze)
             {
+                grabbingCooldown -= Time.deltaTime;
+
+                this.UpdateCollisions();
+                this.isInsideShip = this.IsInsideShip();
+                this.agent.speed = this.speed;
+
                 if (isInsideShip && base.transform.parent == null)
                 {
                     EnterShip();
@@ -262,6 +284,18 @@ namespace DuckMod.Behaviors
                 else if (!isInsideShip && base.transform.parent != null)
                 {
                     LeaveShip();
+                }
+
+                // check for enemies
+                if (Time.time - this.lastCheckEnemy >= this.checkEnemyCooldown)
+                {
+                    this.lastCheckEnemy = Time.time;
+
+                    if (this.CheckForEnemies())
+                    {
+                        this.StartQuacking();
+                        this.lastCheckEnemy = Time.time + 10;
+                    }
                 }
             }
         }
@@ -285,6 +319,7 @@ namespace DuckMod.Behaviors
             this.freeze = false;
             this.agent.enabled = enableAgent;
             this.physicsProp.enabled = false;
+            this.networkObject.SynchronizeTransform = false;
             dropShip = FindObjectOfType<ItemDropship>();
             Log("Start Round!");
             OnStartRound();
@@ -293,10 +328,16 @@ namespace DuckMod.Behaviors
         protected void EndRound()
         {
             Log("End Round!");
-            this.freeze = true;
-            this.agent.enabled = false;
-            this.physicsProp.enabled = true;
-            OnEndRound();
+            if (isInsideShip)
+            {
+                this.freeze = true;
+                this.agent.enabled = false;
+                this.physicsProp.enabled = true;
+                this.networkObject.SynchronizeTransform = true;
+                OnEndRound();
+                return;
+            }
+            Destroy(this.gameObject);
         }
 
         protected virtual void OnEnterShip() { }
@@ -337,7 +378,7 @@ namespace DuckMod.Behaviors
             grabbableItems.Clear();
             foreach (GrabbableObject item in FindObjectsOfType<GrabbableObject>())
             {
-                if (item.GetComponent<PetAI>() == null)
+                if (item.GetComponent<PetAI>() == null && item.GetComponent<RagdollGrabbableObject>() == null)
                 {
                     if (dropShip != null && !item.isInShipRoom)
                     {
@@ -481,10 +522,12 @@ namespace DuckMod.Behaviors
 
         public override void OnDestroy()
         {
-            if (petAI == this)
-            {
-                petAI = null;               
-            }
+            //if (petAI == this)
+            //{
+            //    petAI = null;               
+            //}
+
+            petCount--;
         }
 
         protected virtual void OnDying()
@@ -498,7 +541,7 @@ namespace DuckMod.Behaviors
         // Sync Position
         public void SyncPosition()
         {
-            if (Vector3.Distance(serverPosition, base.transform.position) > updatePositionThreshold)
+            if (Vector3.Distance(serverPosition, base.transform.position) > updatePositionThreshold || shipState == ShipState.InSpace)
             {
                 serverPosition = base.transform.position;
                 if (base.IsServer)
@@ -658,6 +701,7 @@ namespace DuckMod.Behaviors
             item.EnablePhysics(false);
             item.isHeld = true;
             item.hasHitGround = false;
+            item.isInFactory = isInFactory;
 
             this.interactTrigger.interactable = true;
         }
@@ -752,6 +796,11 @@ namespace DuckMod.Behaviors
                 item.scrapPersistedThroughRounds = true;
                 item.isInShipRoom = true;
                 item.isInFactory = false;
+
+                RoundManager.Instance.scrapCollectedInLevel += item.scrapValue;
+                RoundManager.Instance.CollectNewScrapForThisRound(item);
+                item.OnBroughtToShip();
+                StartOfRound.Instance.currentShipItemCount++;
             }
             else
             {
@@ -771,10 +820,9 @@ namespace DuckMod.Behaviors
             item.EnablePhysics(enable: true);
             item.fallTime = 0f;
             item.startFallingPosition = item.transform.parent.InverseTransformPoint(item.transform.position);
-            Vector3 floorPosition = RoundManager.Instance.GetNavMeshPosition(item.transform.position + this.transform.forward);
+            Vector3 floorPosition = RoundManager.Instance.GetNavMeshPosition(this.itemHolder.transform.position);
             item.targetFloorPosition = item.transform.parent.InverseTransformPoint(floorPosition);
             item.floorYRot = -1;
-            item.DiscardItemFromEnemy();
 
             item.EnableItemMeshes(enable: true);
             item.isHeld = false;
@@ -782,13 +830,13 @@ namespace DuckMod.Behaviors
             item.heldByPlayerOnServer = false;
             //SetItemInElevator(isInHangarShipRoom, isInElevator, placeObject);
 
-
             item.OnPlaceObject();
 
             this.grabbedItems.Remove(item);
             grabbingCooldown = 5f;
             if (this.grabbedItems.Count == 0)
             {
+                
                 this.interactTrigger.interactable = false;
             }
         }
@@ -993,11 +1041,23 @@ namespace DuckMod.Behaviors
         }
 
         // =====================================================================================================================
-        public virtual void OnHit(int force) 
+        public virtual void OnHit(int newHP) 
         {
-            if (hittable)
+            this.hp = newHP;
+            this.animator.SetTrigger("Hit");
+
+            if (hp <= 0)
             {
-                AddHP(-force);
+                //this.physicsProp.scrapValue = (int) this.scrapValue;
+                //this.physicsProp.itemProperties.isScrap = true;
+                //this.physicsProp.enabled = true;
+                //this.physicsProp.isHeld = false;
+                //this.gameObject.tag = "PhysicsProp";
+                //this.gameObject.layer = 6;
+                this.animator.SetBool("IsDead", true);
+                this.itemHolder.gameObject.SetActive(false);
+                this.interactPatter.gameObject.SetActive(false);
+                Destroy(this);
             }
         }
 
@@ -1024,13 +1084,14 @@ namespace DuckMod.Behaviors
                 }
                 if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
                 {
-                    HitClientRpc(force);
+                    int newHp = hittable ? hp - force : hp;
+                    HitClientRpc(Mathf.Clamp(newHp, 0, this.maxHp));
                 }
             }
         }
 
         [ClientRpc]
-        public void HitClientRpc(int force)
+        public void HitClientRpc(int newHP)
         {
             NetworkManager networkManager = base.NetworkManager;
             if ((object)networkManager == null || !networkManager.IsListening)
@@ -1041,12 +1102,12 @@ namespace DuckMod.Behaviors
             {
                 ClientRpcParams clientRpcParams = default(ClientRpcParams);
                 FastBufferWriter bufferWriter = __beginSendClientRpc(847487301u, clientRpcParams, RpcDelivery.Reliable);
-                BytePacker.WriteValueBitPacked(bufferWriter, force);
+                BytePacker.WriteValueBitPacked(bufferWriter, newHP);
                 __endSendClientRpc(ref bufferWriter, 847487301u, clientRpcParams, RpcDelivery.Reliable);
             }
             if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
             {
-                OnHit(force);
+                OnHit(newHP);
             }
         }
 
@@ -1065,6 +1126,11 @@ namespace DuckMod.Behaviors
         public virtual void InteractPat(PlayerControllerB player)
         {
             this.PatServerRpc();
+        }
+
+        public void SetScrapValue(float value)
+        {
+            this.scrapValue = value;
         }
 
         // =====================================================================================================================

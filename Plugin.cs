@@ -24,6 +24,7 @@ namespace DuckMod
         internal ManualLogSource mls;
 
         private ConfigEntry<bool> configDebug;
+        private ConfigEntry<int> configMaxDucks;
         private ConfigEntry<int> configCarryAmount;
         private ConfigEntry<int> configDuckPrice;
         private ConfigEntry<float> configSpeed;
@@ -45,9 +46,14 @@ namespace DuckMod
                                     "Enable logging in Console?"
                                     );
 
+            configMaxDucks = Config.Bind("Duck",
+                                         "Max Duck Count",
+                                         -1,
+                                         "Maximal number of ducks. -1 = infinite");
+
             configDuckPrice = Config.Bind("Duck",
                                           "Duck Price",
-                                          0,
+                                          25,
                                           "Price of a duck");
 
             configCarryAmount = Config.Bind("Duck",
@@ -74,6 +80,8 @@ namespace DuckMod
             PetAI.mls = configDebug.Value ? mls : null;
 
             PetAI.InitializeRPCS_PetAI();
+            PetAI.maxPets = configMaxDucks.Value;
+            int duckPrice = configDuckPrice.Value;
 
             // load assets
             string path = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
@@ -86,6 +94,7 @@ namespace DuckMod
             petDuckAI.speedFactor = configSpeed.Value;
             petDuckAI.hittable = configHittable.Value;
             petDuckAI.maxHp = configHp.Value;
+            petDuckAI.SetScrapValue(duckPrice / 2f);
 
             Item petDuckHat = bundle.LoadAsset<Item>("Assets/Items/PetDuck/PetDuckHatItem.asset");
             PetDuckAI petDuckHatAI = petDuckHat.spawnPrefab.AddComponent <PetDuckAI>();
@@ -93,8 +102,7 @@ namespace DuckMod
             petDuckHatAI.speedFactor = configSpeed.Value;
             petDuckHatAI.hittable = configHittable.Value;
             petDuckHatAI.maxHp = configHp.Value;
-
-            int duckPrice = configDuckPrice.Value;
+            petDuckHatAI.SetScrapValue(duckPrice / 2f);
 
             // Register pet duck
 
