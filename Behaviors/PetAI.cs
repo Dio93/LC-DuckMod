@@ -4,12 +4,15 @@ using GameNetcodeStuff;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Serialization;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using Unity.AI.Navigation;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.SceneManagement;
 using static DuckMod.Behaviors.PetAI;
 
 namespace DuckMod.Behaviors
@@ -322,6 +325,7 @@ namespace DuckMod.Behaviors
             this.networkObject.SynchronizeTransform = false;
             dropShip = FindObjectOfType<ItemDropship>();
             Log("Start Round!");
+
             OnStartRound();
         }
 
