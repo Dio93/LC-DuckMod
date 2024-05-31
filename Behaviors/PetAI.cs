@@ -54,11 +54,15 @@ namespace DuckMod.Behaviors
         protected ShipState shipState;
 
         protected static ItemDropship dropShip;
+        protected float nextItemInteract;
         protected static float grabbingCooldown = 0f;
         protected GrabbableObject targetItem;
         protected static IList<GrabbableObject> grabbableItems = new List<GrabbableObject>();
         protected IList<GrabbableObject> grabbedItems = new List<GrabbableObject>();
         public int itemCapacity = 1;
+        public bool canUseItem = false;
+        public bool canGrabHive = false;
+        public bool canGrabTwoHanded = false;
         protected static float nextItemCheck = 0f;
         protected static float nextItemCheckCooldown = 10f;
 
@@ -66,6 +70,7 @@ namespace DuckMod.Behaviors
         private float nextSpeedCheck = 0f;
         private float nextSpeedCheckCooldown = 30f;
         protected PlayerControllerB targetPlayer;
+        protected float findTargetPlayerIn = 0f;
         protected Vector3 destination;
         protected float minPlayerDist = 4f;
         protected float maxPlayerDist = Mathf.Infinity;
@@ -83,6 +88,7 @@ namespace DuckMod.Behaviors
         private float syncMovementSpeed = 0.1f;
 
         private bool freeze = false;
+
 
         public virtual void Start()
         {
@@ -146,6 +152,10 @@ namespace DuckMod.Behaviors
             {
                 this.itemHolder = this.transform;
             }
+            else
+            {
+                this.itemHolder.rotation = Quaternion.Euler(90, 0, 0);
+            }
 
             if (base.IsOwner)
             {
@@ -163,6 +173,10 @@ namespace DuckMod.Behaviors
                 if (this.agent.enabled)
                 {
                     nextItemCheck -= Time.deltaTime;
+                    if (nextItemCheck < 0)
+                    {
+                        nextItemCheck = 0;
+                    }
 
                     if (nextItemCheck <= 0)
                     {
@@ -179,6 +193,10 @@ namespace DuckMod.Behaviors
                         else
                         {
                             this.nextSpeedCheck -= Time.deltaTime;
+                            if (this.nextSpeedCheck < 0)
+                            {
+                                this.nextSpeedCheck = 0;
+                            }
                         }
                     }
                     DoAI();
@@ -275,6 +293,10 @@ namespace DuckMod.Behaviors
             if (!freeze)
             {
                 grabbingCooldown -= Time.deltaTime;
+                if (grabbingCooldown < 0)
+                {
+                    grabbingCooldown = 0;
+                }
 
                 this.UpdateCollisions();
                 this.isInsideShip = this.IsInsideShip();
@@ -359,6 +381,17 @@ namespace DuckMod.Behaviors
 
         protected PlayerControllerB GetClosestPlayer()
         {
+            if (this.findTargetPlayerIn > 0 && this.targetPlayer != null)
+            {
+                this.findTargetPlayerIn -= Time.deltaTime;
+                if (this.findTargetPlayerIn < 0)
+                {
+                    this.findTargetPlayerIn = 0;
+                }
+
+                return this.targetPlayer;
+            }
+
             float foundMinDistance = Mathf.Infinity;
             PlayerControllerB closestPlayer = null;
 
@@ -379,11 +412,28 @@ namespace DuckMod.Behaviors
         {
             nextItemCheck = nextItemCheckCooldown;
 
+            if (grabbableItems == null)
+            {
+                return;
+            }
             grabbableItems.Clear();
             foreach (GrabbableObject item in FindObjectsOfType<GrabbableObject>())
             {
                 if (item.GetComponent<PetAI>() == null && item.GetComponent<RagdollGrabbableObject>() == null)
                 {
+                    if (item.name.Contains("Apparatus"))
+                    {
+                        continue;
+                    }
+                    if (item.itemProperties.twoHanded && !this.canGrabTwoHanded)
+                    {
+                        continue;
+                    }
+                    if (item.name.Contains("RedLocustHive") && !this.canGrabHive)
+                    {
+                        Log("Can't grab Hive");
+                        continue;
+                    }
                     if (dropShip != null && !item.isInShipRoom)
                     {
                         Log("Drop ship: " + dropShip.name);
@@ -786,6 +836,90 @@ namespace DuckMod.Behaviors
         }
 
         // =====================================================================================================================
+        public void UseItem()
+        {
+            foreach (GrabbableObject item in this.grabbedItems)
+            {
+                FlashlightItem flashlight = item.GetComponent<FlashlightItem>();
+                if (flashlight != null)
+                {
+                    bool isBeeingUsed = !flashlight.isBeingUsed;
+                    flashlight.isBeingUsed = isBeeingUsed;
+                    flashlight.flashlightBulb.enabled = isBeeingUsed;
+                    flashlight.flashlightBulbGlow.enabled = isBeeingUsed;
+                }
+                else
+                {
+                    item.UseItemOnClient();
+                }
+            }
+            this.nextItemInteract = UnityEngine.Random.Range(30f, 300f);
+        }
+
+        [ServerRpc]
+        public void UseItemServerRpc()
+        {
+            NetworkManager networkManager = base.NetworkManager;
+            if ((object)networkManager == null || !networkManager.IsListening)
+            {
+                return;
+            }
+            if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
+            {
+                if (base.OwnerClientId != networkManager.LocalClientId)
+                {
+                    if (networkManager.LogLevel <= Unity.Netcode.LogLevel.Normal)
+                    {
+                        Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
+                    }
+                    return;
+                }
+                ServerRpcParams serverRpcParams = default(ServerRpcParams);
+                FastBufferWriter bufferWriter = __beginSendServerRpc(235856144u, serverRpcParams, RpcDelivery.Reliable);
+                __endSendServerRpc(ref bufferWriter, 235856144u, serverRpcParams, RpcDelivery.Reliable);
+            }
+            if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
+            {
+                if (!this.canUseItem)
+                {
+                    return;
+                }
+                if (this.nextItemInteract > 0)
+                {
+                    this.nextItemInteract -= Time.deltaTime;
+                    if (this.nextItemInteract < 0)
+                    {
+                        this.nextItemInteract = 0;
+                    }
+                    return;
+                }
+                UseItemClientRpc();
+                this.nextItemInteract = UnityEngine.Random.Range(30f, 300f);
+            }
+        }
+
+        [ClientRpc]
+        public void UseItemClientRpc()
+        {
+            NetworkManager networkManager = base.NetworkManager;
+            if ((object)networkManager == null || !networkManager.IsListening)
+            {
+                return;
+            }
+            if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
+            {
+                ClientRpcParams clientRpcParams = default(ClientRpcParams);
+                FastBufferWriter bufferWriter = __beginSendClientRpc(235856145u, clientRpcParams, RpcDelivery.Reliable);
+                //BytePacker.WriteValuePacked(bufferWriter, speed);
+                __endSendClientRpc(ref bufferWriter, 235856145u, clientRpcParams, RpcDelivery.Reliable);
+            }
+            if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
+            {
+                UseItem();
+            }
+        }
+
+        // =====================================================================================================================
 
         protected void DropItem(NetworkObject networkObject)
         {
@@ -997,14 +1131,16 @@ namespace DuckMod.Behaviors
 
         // =====================================================================================================================
 
-        public void Pat()
+        public void Pat(PlayerControllerB player)
         {
             this.animator.SetTrigger("Pat");
             this.audioQuacking.Play();
+            this.targetPlayer = player;
+            this.findTargetPlayerIn = 30f;
         }
 
         [ServerRpc]
-        public void PatServerRpc()
+        public void PatServerRpc(NetworkObjectReference objectRef)
         {
             NetworkManager networkManager = base.NetworkManager;
             if ((object)networkManager == null || !networkManager.IsListening)
@@ -1015,16 +1151,17 @@ namespace DuckMod.Behaviors
             {
                 ServerRpcParams serverRpcParams = default(ServerRpcParams);
                 FastBufferWriter bufferWriter = __beginSendServerRpc(2358561456u, serverRpcParams, RpcDelivery.Reliable);
+                bufferWriter.WriteValueSafe(in objectRef, default(FastBufferWriter.ForNetworkSerializable));
                 __endSendServerRpc(ref bufferWriter, 2358561456u, serverRpcParams, RpcDelivery.Reliable);
             }
             if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
             {
-                PatClientRpc();
+                PatClientRpc(objectRef);
             }
         }
 
         [ClientRpc]
-        public void PatClientRpc()
+        public void PatClientRpc(NetworkObjectReference objectRef)
         {
             NetworkManager networkManager = base.NetworkManager;
             if ((object)networkManager == null || !networkManager.IsListening)
@@ -1035,12 +1172,21 @@ namespace DuckMod.Behaviors
             {
                 ClientRpcParams clientRpcParams = default(ClientRpcParams);
                 FastBufferWriter bufferWriter = __beginSendClientRpc(847487227u, clientRpcParams, RpcDelivery.Reliable);
+                bufferWriter.WriteValueSafe(in objectRef, default(FastBufferWriter.ForNetworkSerializable));
                 //BytePacker.WriteValuePacked(bufferWriter, speed);
                 __endSendClientRpc(ref bufferWriter, 847487227u, clientRpcParams, RpcDelivery.Reliable);
             }
             if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
             {
-                Pat();
+                //SwitchToBehaviourStateOnLocalClient(1);
+                if (objectRef.TryGet(out var networkObject))
+                {
+                    Pat(networkObject.GetComponent<PlayerControllerB>());
+                }
+                else
+                {
+                    Debug.LogError(base.gameObject.name + ": Failed to get network object from network object reference (Grab item RPC)");
+                }
             }
         }
 
@@ -1129,7 +1275,7 @@ namespace DuckMod.Behaviors
 
         public virtual void InteractPat(PlayerControllerB player)
         {
-            this.PatServerRpc();
+            this.PatServerRpc(player.NetworkObject);
         }
 
         public void SetScrapValue(float value)
@@ -1157,6 +1303,8 @@ namespace DuckMod.Behaviors
             NetworkManager.__rpc_func_table.Add(847487227u, __rpc_handler_847487227);
             NetworkManager.__rpc_func_table.Add(847487300u, __rpc_handler_847487300);
             NetworkManager.__rpc_func_table.Add(847487301u, __rpc_handler_847487301);
+            NetworkManager.__rpc_func_table.Add(235856144u, __rpc_handler_235856144);
+            NetworkManager.__rpc_func_table.Add(235856145u, __rpc_handler_235856145);
         }
 
         // UpdatePositionServerRpc
@@ -1349,8 +1497,9 @@ namespace DuckMod.Behaviors
             }
             else
             {
+                reader.ReadValue(out NetworkObjectReference value);
                 ((PetAI)target).__rpc_exec_stage = __RpcExecStage.Server;
-                ((PetAI)target).PatServerRpc();
+                ((PetAI)target).PatServerRpc(value);
                 ((PetAI)target).__rpc_exec_stage = __RpcExecStage.None;
             }
         }
@@ -1361,8 +1510,9 @@ namespace DuckMod.Behaviors
             NetworkManager networkManager = target.NetworkManager;
             if ((object)networkManager != null && networkManager.IsListening)
             {
+                reader.ReadValue(out NetworkObjectReference value);
                 ((PetAI)target).__rpc_exec_stage = __RpcExecStage.Client;
-                ((PetAI)target).PatClientRpc();
+                ((PetAI)target).PatClientRpc(value);
                 ((PetAI)target).__rpc_exec_stage = __RpcExecStage.None;
             }
         }
@@ -1393,6 +1543,42 @@ namespace DuckMod.Behaviors
                 ByteUnpacker.ReadValueBitPacked(reader, out int value);
                 ((PetAI)target).__rpc_exec_stage = __RpcExecStage.Client;
                 ((PetAI)target).HitClientRpc(value);
+                ((PetAI)target).__rpc_exec_stage = __RpcExecStage.None;
+            }
+        }
+
+
+        // UseItemServerRpc
+        private static void __rpc_handler_235856144(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
+        {
+            NetworkManager networkManager = target.NetworkManager;
+            if ((object)networkManager == null || !networkManager.IsListening)
+            {
+                return;
+            }
+            if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
+            {
+                if (networkManager.LogLevel <= Unity.Netcode.LogLevel.Normal)
+                {
+                    Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
+                }
+            }
+            else
+            {
+                ((PetAI)target).__rpc_exec_stage = __RpcExecStage.Server;
+                ((PetAI)target).UseItemServerRpc();
+                ((PetAI)target).__rpc_exec_stage = __RpcExecStage.None;
+            }
+        }
+
+        // UseItemClientRpc
+        private static void __rpc_handler_235856145(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
+        {
+            NetworkManager networkManager = target.NetworkManager;
+            if ((object)networkManager != null && networkManager.IsListening)
+            {
+                ((PetAI)target).__rpc_exec_stage = __RpcExecStage.Client;
+                ((PetAI)target).UseItemClientRpc();
                 ((PetAI)target).__rpc_exec_stage = __RpcExecStage.None;
             }
         }

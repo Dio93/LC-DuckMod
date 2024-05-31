@@ -5,12 +5,15 @@ using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.Rendering.HighDefinition;
 
 namespace DuckMod.Behaviors
 {
     [RequireComponent(typeof(NavMeshAgent))]
     internal class PetDuckAI : PetAI
     {
+        public static List<(float, Material)> materials = new List<(float, Material)>();
+
         private float nextFlipCooldown = 60f;
         private float nextFlip = 120f;
 
@@ -33,6 +36,26 @@ namespace DuckMod.Behaviors
             "\nSpeed: " + this.agent.speed +
             "\nVelocity: " + this.agent.velocity +
             "\nAcceleration: " + this.agent.acceleration);
+
+
+            // select random material
+
+            foreach ((float, Material) material in materials)
+            {
+                if (UnityEngine.Random.Range(0f, 1f) < material.Item1)
+                {
+                    transform.GetComponentInChildren<SkinnedMeshRenderer>().material = material.Item2;
+                    if (material.Item2.name == "DuckShader Gold")
+                    {
+                        Log("Golden Duck!!!");
+                        HDAdditionalLightData lightData = this.gameObject.AddComponent<HDAdditionalLightData>();
+                        Light light = this.gameObject.GetComponent<Light>();
+                        light.intensity = 100f;
+                        light.color = new Color(1, 0.75f, 0.5f, 1);
+                    }
+                    break;
+                }
+            }
         }
 
         override public void Update()
@@ -83,14 +106,15 @@ namespace DuckMod.Behaviors
 
             float playerDistance = Vector3.Distance(base.transform.position, this.targetPlayer.transform.position);
 
-            // player on another level
-            if ((this.targetPlayer.isInsideFactory && !this.isInFactory) || (!this.targetPlayer.isInsideFactory && this.isInFactory))
-            {
-                this.duckState = DuckState.MovingToEntrance;
-            }
-            else if (this.targetItem != null)
+            if (this.targetItem != null)
             {
                 this.duckState = DuckState.MovingToItem;
+            }
+
+            // player on another level
+            else if ((this.targetPlayer.isInsideFactory && !this.isInFactory) || (!this.targetPlayer.isInsideFactory && this.isInFactory))
+            {
+                this.duckState = DuckState.MovingToEntrance;
             }
             else if (playerDistance <= this.minPlayerDist)
             {
@@ -154,6 +178,7 @@ namespace DuckMod.Behaviors
                 case DuckState.Searching:
                     break;
             }
+            UseItemServerRpc();
         }
 
         //override public void OnCollideWithEnemy(Collider other, EnemyAI collidedEnemy = null)

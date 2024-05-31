@@ -1,0 +1,10 @@
+{
+    "name": "DuckMod",
+    "version_number": "1.3.0",
+    "website_url": "https://github.com/Dio93/LC-DuckMod",
+    "description": "This mod adds a pet duck to your game.",
+    "dependencies": [
+    "BepInEx-BepInExPack-5.4.2100",
+	"Evaisa-LethalLib-0.15.1"
+    ]
+}
