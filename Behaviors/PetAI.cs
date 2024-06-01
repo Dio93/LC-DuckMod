@@ -48,6 +48,8 @@ namespace DuckMod.Behaviors
         protected bool isInsideShip;
         protected bool isInFactory;
 
+        protected float checkForBoombox = 0f;
+
         protected float checkEnemyCooldown = 10;
         protected float lastCheckEnemy = -1f;
 
@@ -290,6 +292,8 @@ namespace DuckMod.Behaviors
                     break;
             }
 
+            NextToBoomBox();
+
             if (!freeze)
             {
                 grabbingCooldown -= Time.deltaTime;
@@ -509,6 +513,41 @@ namespace DuckMod.Behaviors
                     return;
                 }
             }
+        }
+
+        public void NextToBoomBox()
+        {
+            if (this.animator.GetBool("IsWalking"))
+            {
+                this.animator.SetBool("IsDancing", false);
+                return;
+            }
+
+            if (checkForBoombox > 0)
+            {
+                checkForBoombox -= Time.deltaTime;
+                if (checkForBoombox < 0)
+                {
+                    checkForBoombox = 0;
+                }
+                return;
+            }
+
+            checkForBoombox = 2f;
+            BoomboxItem[] boomboxes = UnityEngine.Object.FindObjectsOfType<BoomboxItem>();
+            foreach (BoomboxItem boombox in boomboxes)
+            {
+                float distance = Vector3.Distance(this.transform.position, boombox.transform.position);
+                Log("Boombox distance: " + distance);
+                Log("Is Boombox playing? " + boombox.isPlayingMusic);
+                if (boombox.isPlayingMusic && distance <= 5f)
+                {
+                    this.animator.SetBool("IsDancing", true);
+                    return;
+                }
+            }
+
+            this.animator.SetBool("IsDancing", false);
         }
 
         protected void Teleport()
