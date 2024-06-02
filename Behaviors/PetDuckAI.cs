@@ -13,7 +13,7 @@ namespace DuckMod.Behaviors
     internal class PetDuckAI : PetAI
     {
         public static List<(float, Material)> materials = new List<(float, Material)>();
-
+        private int shaderID;
         private float nextFlipCooldown = 60f;
         private float nextFlip = 120f;
 
@@ -37,25 +37,21 @@ namespace DuckMod.Behaviors
             "\nVelocity: " + this.agent.velocity +
             "\nAcceleration: " + this.agent.acceleration);
 
-
-            // select random material
-
-            foreach ((float, Material) material in materials)
+            if (base.IsServer)
             {
-                if (UnityEngine.Random.Range(0f, 1f) < material.Item1)
+                // select random material
+                int i = 0;
+                foreach ((float, Material) material in materials)
                 {
-                    transform.GetComponentInChildren<SkinnedMeshRenderer>().material = material.Item2;
-                    if (material.Item2.name == "DuckShader Gold")
+                    if (UnityEngine.Random.Range(0f, 1f) < material.Item1)
                     {
-                        Log("Golden Duck!!!");
-                        HDAdditionalLightData lightData = this.gameObject.AddComponent<HDAdditionalLightData>();
-                        Light light = this.gameObject.GetComponent<Light>();
-                        light.intensity = 100f;
-                        light.color = new Color(1, 0.75f, 0.5f, 1);
+                        this.shaderID = i;
                     }
-                    break;
+                    i++;
                 }
             }
+
+            ChangeShaderServerRpc();
         }
 
         override public void Update()
@@ -218,72 +214,109 @@ namespace DuckMod.Behaviors
             this.animator.SetTrigger("Flip");
         }
 
-        //[ServerRpc]
-        //public void DoFlipServerRpc()
-        //{
-        //    NetworkManager networkManager = base.NetworkManager;
-        //    if ((object)networkManager == null || !networkManager.IsListening)
-        //    {
-        //        return;
-        //    }
-        //    if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-        //    {
-        //        //if (base.OwnerClientId != networkManager.LocalClientId)
-        //        //{
-        //        //    if (networkManager.LogLevel <= Unity.Netcode.LogLevel.Normal)
-        //        //    {
-        //        //        Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-        //        //    }
-        //        //    return;
-        //        //}
-        //        ServerRpcParams serverRpcParams = default(ServerRpcParams);
-        //        FastBufferWriter bufferWriter = __beginSendServerRpc(847487222u, serverRpcParams, RpcDelivery.Reliable);
-        //        bufferWriter.WriteValueSafe(in objectRef, default(FastBufferWriter.ForNetworkSerializable));
-        //        __endSendServerRpc(ref bufferWriter, 847487222u, serverRpcParams, RpcDelivery.Reliable);
-        //    }
-        //    if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-        //    {
-        //        DropItemClientRpc(objectRef);
-        //    }
-        //}
 
 
+        // =====================================================================================================================
 
-        //private static void __rpc_handler_847487222(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-        //{
-        //    NetworkManager networkManager = target.NetworkManager;
-        //    if ((object)networkManager == null || !networkManager.IsListening)
-        //    {
-        //        return;
-        //    }
-        //    //if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-        //    //{
-        //    //    if (networkManager.LogLevel <= Unity.Netcode.LogLevel.Normal)
-        //    //    {
-        //    //        Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-        //    //    }
-        //    //}
-        //    else
-        //    {
-        //        reader.ReadValueSafe(out NetworkObjectReference value, default(FastBufferWriter.ForNetworkSerializable));
-        //        ((PetAI)target).__rpc_exec_stage = __RpcExecStage.Server;
-        //        ((PetAI)target).DropItemServerRpc(value);
-        //        ((PetAI)target).__rpc_exec_stage = __RpcExecStage.None;
-        //    }
-        //}
+        public void ChangeShader(int shaderID)
+        {
+            this.shaderID = shaderID;
 
-        //// DropItemClientRpc
-        //private static void __rpc_handler_847487223(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-        //{
-        //    NetworkManager networkManager = target.NetworkManager;
-        //    if ((object)networkManager != null && networkManager.IsListening)
-        //    {
-        //        reader.ReadValueSafe(out NetworkObjectReference value, default(FastBufferWriter.ForNetworkSerializable));
-        //        ((PetAI)target).__rpc_exec_stage = __RpcExecStage.Client;
-        //        ((PetAI)target).DropItemClientRpc(value);
-        //        ((PetAI)target).__rpc_exec_stage = __RpcExecStage.None;
-        //    }
-        //}
+            Material material = materials[shaderID].Item2;
+
+            transform.GetComponentInChildren<SkinnedMeshRenderer>().material = material;
+            if (material.name == "DuckShader Gold")
+            {
+                Log("Golden Duck!!!");
+                HDAdditionalLightData lightData = this.gameObject.AddComponent<HDAdditionalLightData>();
+                Light light = this.gameObject.GetComponent<Light>();
+                light.intensity = 100f;
+                light.color = new Color(1, 0.75f, 0.5f, 1);
+            }
+        }
+
+        [ServerRpc(RequireOwnership = false)]
+        public void ChangeShaderServerRpc()
+        {
+            NetworkManager networkManager = base.NetworkManager;
+            if ((object)networkManager != null && networkManager.IsListening)
+            {
+                if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
+                {
+                    ServerRpcParams serverRpcParams = default(ServerRpcParams);
+                    FastBufferWriter bufferWriter = __beginSendServerRpc(3079913500u, serverRpcParams, RpcDelivery.Reliable);
+                    //BytePacker.WriteValueBitPacked(bufferWriter, shaderID);
+                    __endSendServerRpc(ref bufferWriter, 3079913500u, serverRpcParams, RpcDelivery.Reliable);
+                }
+                if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
+                {
+                    ChangeShaderClientRpc(shaderID);
+                }
+            }
+        }
+
+        [ClientRpc]
+        public void ChangeShaderClientRpc(int shaderID)
+        {
+            NetworkManager networkManager = base.NetworkManager;
+            if ((object)networkManager == null || !networkManager.IsListening)
+            {
+                return;
+            }
+            if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
+            {
+                ClientRpcParams clientRpcParams = default(ClientRpcParams);
+                FastBufferWriter bufferWriter = __beginSendClientRpc(3079913501u, clientRpcParams, RpcDelivery.Reliable);
+                BytePacker.WriteValueBitPacked(bufferWriter, shaderID);
+                __endSendClientRpc(ref bufferWriter, 3079913501u, clientRpcParams, RpcDelivery.Reliable);
+            }
+            if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
+            {
+                ChangeShader(shaderID);
+            }
+        }
+        // =====================================================================================================================
+
+        // RPC Handler
+        [RuntimeInitializeOnLoadMethod]
+        internal static void InitializeRPCS_PetDuckAI()
+        {
+            NetworkManager.__rpc_func_table.Add(3079913500u, __rpc_handler_3079913500);
+            NetworkManager.__rpc_func_table.Add(3079913501u, __rpc_handler_3079913501);
+        }
+
+
+        // UpdateShaderServerRpc
+        private static void __rpc_handler_3079913500(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
+        {
+            NetworkManager networkManager = target.NetworkManager;
+            if ((object)networkManager == null || !networkManager.IsListening)
+            {
+                return;
+            }
+            else
+            {
+                //ByteUnpacker.ReadValueBitPacked(reader, out short value);
+                ((PetDuckAI)target).__rpc_exec_stage = __RpcExecStage.Server;
+                ((PetDuckAI)target).ChangeShaderServerRpc();
+                ((PetDuckAI)target).__rpc_exec_stage = __RpcExecStage.None;
+            }
+        }
+
+        // UpdateShaderClientRpc
+        private static void __rpc_handler_3079913501(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
+        {
+            NetworkManager networkManager = target.NetworkManager;
+            if ((object)networkManager != null && networkManager.IsListening)
+            {
+                ByteUnpacker.ReadValueBitPacked(reader, out short value);
+                ((PetDuckAI)target).__rpc_exec_stage = __RpcExecStage.Client;
+                ((PetDuckAI)target).ChangeShaderClientRpc(value);
+                ((PetDuckAI)target).__rpc_exec_stage = __RpcExecStage.None;
+            }
+        }
+
+        // =====================================================================================================================
 
         public override void Log(string message)
         {

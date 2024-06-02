@@ -15,7 +15,7 @@ namespace DuckMod
     {
         private const string modGUID = "Dio93.DuckMod";
         private const string modName = "DuckMod";
-        private const string modVersion = "1.3.0.0";
+        private const string modVersion = "1.4.0.0";
 
         private readonly Harmony harmony = new Harmony(modGUID);
 
@@ -115,6 +115,7 @@ namespace DuckMod
             mls = BepInEx.Logging.Logger.CreateLogSource(modGUID);
             PetAI.mls = configDebug.Value ? mls : null;
 
+            PetDuckAI.InitializeRPCS_PetDuckAI();
             PetAI.InitializeRPCS_PetAI();
             PetAI.maxPets = configMaxDucks.Value;
             int duckPrice = configDuckPrice.Value;
