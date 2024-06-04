@@ -33,6 +33,7 @@ namespace DuckMod
         private ConfigEntry<float> configSpeed;
         private ConfigEntry<bool> configHittable;
         private ConfigEntry<int> configHp;
+        private ConfigEntry<bool> configCanOpenDoors;
         private ConfigEntry<float> configTextureWhite;
         private ConfigEntry<float> configTextureGreen;
         private ConfigEntry<float> configTextureGold;
@@ -81,6 +82,11 @@ namespace DuckMod
                                            false,
                                            "Can the duck use items?");
 
+            configCanOpenDoors = Config.Bind("Duck",
+                                             "Can open doors",
+                                             true,
+                                             "Can ducks open doors?");
+
             configSpeed = Config.Bind("Duck",
                                       "Speed",
                                       0.8f,
@@ -111,7 +117,6 @@ namespace DuckMod
                                              0.01f,
                                              "Probability of gold texture");
 
-
             mls = BepInEx.Logging.Logger.CreateLogSource(modGUID);
             PetAI.mls = configDebug.Value ? mls : null;
 
@@ -139,6 +144,7 @@ namespace DuckMod
             petDuckAI.canGrabTwoHanded = configCanGrabTwoHanded.Value;
             petDuckAI.canGrabHive = configCanGrabHive.Value;
             petDuckAI.canUseItem = configCanUseItem.Value;
+            petDuckAI.canOpenDoors = configCanOpenDoors.Value;
             petDuckAI.speedFactor = configSpeed.Value;
             petDuckAI.hittable = configHittable.Value;
             petDuckAI.maxHp = configHp.Value;
@@ -150,6 +156,7 @@ namespace DuckMod
             petDuckHatAI.canGrabTwoHanded = configCanGrabTwoHanded.Value;
             petDuckHatAI.canGrabHive = configCanGrabHive.Value;
             petDuckHatAI.canUseItem= configCanUseItem.Value;
+            petDuckHatAI.canOpenDoors= configCanOpenDoors.Value;
             petDuckHatAI.speedFactor = configSpeed.Value;
             petDuckHatAI.hittable = configHittable.Value;
             petDuckHatAI.maxHp = configHp.Value;
@@ -181,7 +188,7 @@ namespace DuckMod
 
             Items.RegisterShopItem(petDuckHat, duckHatNode, null, null, duckPrice);
 
-            mls.LogInfo("The duck mod has awaken :)");
+            mls.LogInfo("The duck mod 1.4.0 has awaken :)");
             //foreach(Items.PlainItem each in Items.plainItems)
             //{
             //    mls.LogInfo(each.item.itemName);

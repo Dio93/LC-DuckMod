@@ -8,6 +8,7 @@ using System.Runtime.Serialization;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using System.Reflection;
 using Unity.AI.Navigation;
 using Unity.Netcode;
 using UnityEngine;
@@ -40,6 +41,7 @@ namespace DuckMod.Behaviors
         protected Transform itemHolder;
         protected Transform interactPatter;
         protected InteractTrigger interactTrigger;
+        protected SkinnedMeshRenderer[] meshRenderers;
 
         private float scrapValue;
         public int maxHp = 10;
@@ -54,6 +56,7 @@ namespace DuckMod.Behaviors
         protected float lastCheckEnemy = -1f;
 
         protected ShipState shipState;
+        protected DoorLock[] doors;
 
         protected static ItemDropship dropShip;
         protected float nextItemInteract;
@@ -65,6 +68,7 @@ namespace DuckMod.Behaviors
         public bool canUseItem = false;
         public bool canGrabHive = false;
         public bool canGrabTwoHanded = false;
+        public bool canOpenDoors = false;
         protected static float nextItemCheck = 0f;
         protected static float nextItemCheckCooldown = 10f;
 
@@ -109,6 +113,9 @@ namespace DuckMod.Behaviors
             //    Destroy(this.gameObject);
             //    return;
             //}
+
+            // Init mesh renderers
+            this.meshRenderers = transform.GetComponentsInChildren<SkinnedMeshRenderer>();
 
             dropShip = FindObjectOfType<ItemDropship>();
 
@@ -219,6 +226,17 @@ namespace DuckMod.Behaviors
                     Mathf.Lerp(oldPos.y, serverPosition.y, t), 
                     Mathf.Lerp(oldPos.z, serverPosition.z, t));
                 this.transform.rotation = Quaternion.Euler(this.transform.rotation.eulerAngles.x, this.targetYRotation, this.transform.rotation.eulerAngles.z);
+            }
+        }
+
+        public void LateUpdate()
+        {
+            foreach (SkinnedMeshRenderer meshRenderer in this.meshRenderers)
+            {
+                if (meshRenderer.forceRenderingOff)
+                {
+                    meshRenderer.forceRenderingOff = false;
+                }
             }
         }
 
@@ -351,6 +369,8 @@ namespace DuckMod.Behaviors
             this.networkObject.SynchronizeTransform = false;
             dropShip = FindObjectOfType<ItemDropship>();
             Log("Start Round!");
+
+            doors = FindObjectsOfType<DoorLock>();
 
             OnStartRound();
         }
@@ -500,19 +520,54 @@ namespace DuckMod.Behaviors
             return targetItem;
         }
 
-        public void OpenDoorInfront()
+        internal bool IsDoorOpen(DoorLock door)
         {
-            Ray ray = new Ray(this.transform.position, this.transform.forward);
-            RaycastHit[] hits = Physics.RaycastAll(ray, 1f);
-            foreach (RaycastHit hit in hits)
+            FieldInfo type = typeof(DoorLock).GetField("isDoorOpened", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            return (bool)type.GetValue(door);
+        }
+
+        public float Angle2D(Plane plane, Vector3 from, Vector3 to, bool signed = false)
+        {
+            Vector2 from2d = plane.ClosestPointOnPlane(from);
+            Vector2 to2d = plane.ClosestPointOnPlane(to);
+
+            float angle = Vector2.Angle(from2d, to2d);
+
+            if (signed)
             {
-                if (hit.transform.gameObject.GetComponent<Door>() != null)
+                return angle;
+            }
+            else
+            {
+                return Mathf.Abs(angle);
+            }
+        }
+
+        public void GetDoor()
+        {
+            if (!canOpenDoors)
+            {
+                return;
+            }
+
+            foreach (DoorLock door in doors)
+            {
+                if (IsDoorOpen(door))
                 {
-                    Door door = hit.transform.gameObject.GetComponent<Door>();
-                    door.SetDoorState(true);
+                    return;
+                }
+                Vector3 direction = door.transform.position - base.transform.position;
+
+                if (Angle2D(new Plane(Vector3.up, Vector3.zero), this.transform.forward, direction) <= 45 && Vector3.Distance(this.transform.position, door.transform.position) <= 2f)
+                {
+                    AnimatedObjectTrigger anim = door.GetComponent<AnimatedObjectTrigger>();
+                    anim.TriggerAnimationNonPlayer(overrideBool: true);
+                    door.OpenDoorAsEnemyServerRpc();
                     return;
                 }
             }
+
+            return;
         }
 
         public void NextToBoomBox()

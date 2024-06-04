@@ -39,16 +39,37 @@ namespace DuckMod.Behaviors
 
             if (base.IsServer)
             {
-                // select random material
-                int i = 0;
+                float sum = 0;
+
+                // normalize probabilities
                 foreach ((float, Material) material in materials)
                 {
-                    if (UnityEngine.Random.Range(0f, 1f) < material.Item1)
-                    {
-                        this.shaderID = i;
-                    }
-                    i++;
+                    sum += material.Item1;
                 }
+
+                // select random material
+                int i = -1;
+                float sumP = 0;
+                float r = UnityEngine.Random.Range(0f, 1f);
+
+                foreach ((float, Material) material in materials)
+                {
+                    ++i;
+                    float p = material.Item1 / sum;
+
+                    if (r < p + sumP)
+                    {
+                        break;
+                    }
+                    sumP += p;
+                }
+                Log("Shader count: " + materials.Count);
+                Log("sum: " + sum);
+                Log("r: " + r);
+                Log("i: " + i);
+
+                this.shaderID = i;
+                Log("sumP: " + sumP);
             }
 
             ChangeShaderServerRpc();
@@ -98,7 +119,7 @@ namespace DuckMod.Behaviors
             }
 
             // open doors if they are infront
-            OpenDoorInfront();
+            GetDoor();
 
             float playerDistance = Vector3.Distance(base.transform.position, this.targetPlayer.transform.position);
 
@@ -222,9 +243,11 @@ namespace DuckMod.Behaviors
         {
             this.shaderID = shaderID;
 
+            Log("ShaderID: " + shaderID);
+
             Material material = materials[shaderID].Item2;
 
-            transform.GetComponentInChildren<SkinnedMeshRenderer>().material = material;
+            this.meshRenderers[0].material = material;
             if (material.name == "DuckShader Gold")
             {
                 Log("Golden Duck!!!");
@@ -250,7 +273,8 @@ namespace DuckMod.Behaviors
                 }
                 if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
                 {
-                    ChangeShaderClientRpc(shaderID);
+                    Log("ShaderServerRPC: " + shaderID);
+                    ChangeShaderClientRpc(this.shaderID);
                 }
             }
         }
@@ -272,6 +296,7 @@ namespace DuckMod.Behaviors
             }
             if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
             {
+                Log("ShaderClientRPC: " + shaderID);
                 ChangeShader(shaderID);
             }
         }
@@ -309,7 +334,7 @@ namespace DuckMod.Behaviors
             NetworkManager networkManager = target.NetworkManager;
             if ((object)networkManager != null && networkManager.IsListening)
             {
-                ByteUnpacker.ReadValueBitPacked(reader, out short value);
+                ByteUnpacker.ReadValueBitPacked(reader, out int value);
                 ((PetDuckAI)target).__rpc_exec_stage = __RpcExecStage.Client;
                 ((PetDuckAI)target).ChangeShaderClientRpc(value);
                 ((PetDuckAI)target).__rpc_exec_stage = __RpcExecStage.None;
