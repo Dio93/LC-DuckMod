@@ -5,22 +5,13 @@ If you like my work please consider supporting me on [Ko-fi](https://ko-fi.com/d
 
 <h1>What's New?</h1>
 
-- New settings in config. <br> **Make sure all players have the same configs.** <br>The following settings can be made:
-    - Can the duck use items it is holding?
-    - Is the duck able to grab beehives?
-    - Is the duck able to grab two handed items?
-    - Probability of different textures
-- There are now multiple textures that are randomly assigned
-    - Maybe you will get a rare golden duck
-- The duck ignores apparatus now
-- Some changes in the ai
-    - If you interact with the duck, it will follow you (the duck will follow you into the factory even if other players are still outside)
-- Several fixes
+- The duck can now grab dead players. Enable and disable it in the config.
+- Fixed an issue with CullFactory.
+- Fixed an issue with PushCompany.
 
 <h1>Known issues</h1>
 
 - There are still some sync issues when you start/ land the ship
-- Ducks can't grab dead players
 - You can't grab dead ducks :(
 - Ordering a duck on the company moon will let the duck freeze. [NavMeshInCompany](https://thunderstore.io/c/lethal-company/p/Kittenji/NavMeshInCompany/) fixes this issue
 - There are issues when using custom interiors

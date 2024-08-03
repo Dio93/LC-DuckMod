@@ -40,8 +40,9 @@
     <Reference Include="BepInEx">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Lethal Company\BepInEx\core\BepInEx.dll</HintPath>
     </Reference>
-    <Reference Include="LethalLib">
-      <HintPath>..\..\..\SteamLibrary\steamapps\common\Lethal Company\BepInEx\plugins\LethalLib\LethalLib.dll</HintPath>
+    <Reference Include="LethalLib, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\SteamLibrary\steamapps\common\Lethal Company\BepInEx\plugins\Evaisa-LethalLib\LethalLib\LethalLib.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -86,7 +87,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Behaviors\CustomInteractable.cs" />
+    <Compile Include="Behaviors\DuckEggBehavior.cs" />
     <Compile Include="Behaviors\PetAI.cs" />
     <Compile Include="Behaviors\PetDuckAI.cs" />
     <Compile Include="Plugin.cs" />

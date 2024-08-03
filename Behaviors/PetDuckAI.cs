@@ -119,7 +119,8 @@ namespace DuckMod.Behaviors
             }
 
             // open doors if they are infront
-            GetDoor();
+            DoorLock door = GetNextDoor();
+            if (door != null) OpenDoor(door);
 
             float playerDistance = Vector3.Distance(base.transform.position, this.targetPlayer.transform.position);
 

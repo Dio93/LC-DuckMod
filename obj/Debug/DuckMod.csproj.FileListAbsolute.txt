@@ -226,7 +226,6 @@ E:\modding\lethal company\LC-DuckMod\bin\Debug\DuckMod.dll
 E:\modding\lethal company\LC-DuckMod\bin\Debug\0Harmony.dll
 E:\modding\lethal company\LC-DuckMod\bin\Debug\Assembly-CSharp.dll
 E:\modding\lethal company\LC-DuckMod\bin\Debug\BepInEx.dll
-E:\modding\lethal company\LC-DuckMod\bin\Debug\LethalLib.dll
 E:\modding\lethal company\LC-DuckMod\bin\Debug\Unity.Netcode.Runtime.dll
 E:\modding\lethal company\LC-DuckMod\bin\Debug\UnityEngine.AIModule.dll
 E:\modding\lethal company\LC-DuckMod\bin\Debug\UnityEngine.AssetBundleModule.dll
@@ -333,3 +332,4 @@ E:\modding\lethal company\LC-DuckMod\obj\Debug\DuckMod.csproj.AssemblyReference.
 E:\modding\lethal company\LC-DuckMod\obj\Debug\DuckMod.csproj.CoreCompileInputs.cache
 E:\modding\lethal company\LC-DuckMod\obj\Debug\DuckMod.csproj.Up2Date
 E:\modding\lethal company\LC-DuckMod\obj\Debug\DuckMod.dll
+E:\modding\lethal company\LC-DuckMod\bin\Debug\LethalLib.dll

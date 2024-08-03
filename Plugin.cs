@@ -15,7 +15,7 @@ namespace DuckMod
     {
         private const string modGUID = "Dio93.DuckMod";
         private const string modName = "DuckMod";
-        private const string modVersion = "1.4.0.0";
+        private const string modVersion = "1.5.0.0";
 
         private readonly Harmony harmony = new Harmony(modGUID);
 
@@ -27,6 +27,7 @@ namespace DuckMod
         private ConfigEntry<int> configMaxDucks;
         private ConfigEntry<int> configCarryAmount;
         private ConfigEntry<bool> configCanGrabTwoHanded;
+        private ConfigEntry<bool> configCanGrabPlayer;
         private ConfigEntry<bool> configCanGrabHive;
         private ConfigEntry<bool> configCanUseItem;
         private ConfigEntry<int> configDuckPrice;
@@ -67,10 +68,15 @@ namespace DuckMod
                                             1,
                                             "The amount of items the duck can carry");
 
+            configCanGrabPlayer = Config.Bind("Duck.Items",
+                                              "Can grab players",
+                                              true,
+                                              "Can the duck grab dead players?");
+
             configCanGrabTwoHanded = Config.Bind("Duck.Items",
                                                  "Can grab two handed",
                                                  true,
-                                                 "Cant he duck grab two handed items?");
+                                                 "Can the duck grab two handed items?");
 
             configCanGrabHive = Config.Bind("Duck.Items",
                                             "Can grab hive",
@@ -138,13 +144,15 @@ namespace DuckMod
             PetDuckAI.materials.Add((configTextureGreen.Value, duckShaderGreen));
             PetDuckAI.materials.Add((configTextureWhite.Value, duckShaderWhite));
 
+            PetAI.canGrabPlayers = configCanGrabPlayer.Value;
+            PetAI.canGrabTwoHanded = configCanGrabTwoHanded.Value;
+            PetAI.canGrabHive = configCanGrabHive.Value;
+            PetAI.canUseItem = configCanUseItem.Value;
+            PetAI.canOpenDoors = configCanOpenDoors.Value;
+
             Item petDuck = bundle.LoadAsset<Item>("Assets/Items/PetDuck/PetDuckItem.asset");
             PetDuckAI petDuckAI = petDuck.spawnPrefab.AddComponent<PetDuckAI>();
             petDuckAI.itemCapacity = configCarryAmount.Value;
-            petDuckAI.canGrabTwoHanded = configCanGrabTwoHanded.Value;
-            petDuckAI.canGrabHive = configCanGrabHive.Value;
-            petDuckAI.canUseItem = configCanUseItem.Value;
-            petDuckAI.canOpenDoors = configCanOpenDoors.Value;
             petDuckAI.speedFactor = configSpeed.Value;
             petDuckAI.hittable = configHittable.Value;
             petDuckAI.maxHp = configHp.Value;
@@ -153,10 +161,6 @@ namespace DuckMod
             Item petDuckHat = bundle.LoadAsset<Item>("Assets/Items/PetDuck/PetDuckHatItem.asset");
             PetDuckAI petDuckHatAI = petDuckHat.spawnPrefab.AddComponent <PetDuckAI>();
             petDuckHatAI.itemCapacity = configCarryAmount.Value;
-            petDuckHatAI.canGrabTwoHanded = configCanGrabTwoHanded.Value;
-            petDuckHatAI.canGrabHive = configCanGrabHive.Value;
-            petDuckHatAI.canUseItem= configCanUseItem.Value;
-            petDuckHatAI.canOpenDoors= configCanOpenDoors.Value;
             petDuckHatAI.speedFactor = configSpeed.Value;
             petDuckHatAI.hittable = configHittable.Value;
             petDuckHatAI.maxHp = configHp.Value;

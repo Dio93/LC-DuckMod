@@ -65,10 +65,11 @@ namespace DuckMod.Behaviors
         protected static IList<GrabbableObject> grabbableItems = new List<GrabbableObject>();
         protected IList<GrabbableObject> grabbedItems = new List<GrabbableObject>();
         public int itemCapacity = 1;
-        public bool canUseItem = false;
-        public bool canGrabHive = false;
-        public bool canGrabTwoHanded = false;
-        public bool canOpenDoors = false;
+        public static bool canUseItem = false;
+        public static bool canGrabPlayers = true;
+        public static bool canGrabHive = false;
+        public static bool canGrabTwoHanded = false;
+        public static bool canOpenDoors = false;
         protected static float nextItemCheck = 0f;
         protected static float nextItemCheckCooldown = 10f;
 
@@ -229,13 +230,24 @@ namespace DuckMod.Behaviors
             }
         }
 
-        public void LateUpdate()
+        public void TurnOnRendering()
         {
             foreach (SkinnedMeshRenderer meshRenderer in this.meshRenderers)
             {
                 if (meshRenderer.forceRenderingOff)
                 {
                     meshRenderer.forceRenderingOff = false;
+                }
+            }
+            foreach (GrabbableObject item in this.grabbedItems)
+            {
+                MeshRenderer meshRenderer = item.GetComponent<MeshRenderer>();
+                if (meshRenderer != null)
+                {
+                    if (meshRenderer.forceRenderingOff)
+                    {
+                        meshRenderer.forceRenderingOff = false;
+                    }
                 }
             }
         }
@@ -443,19 +455,24 @@ namespace DuckMod.Behaviors
             grabbableItems.Clear();
             foreach (GrabbableObject item in FindObjectsOfType<GrabbableObject>())
             {
-                if (item.GetComponent<PetAI>() == null && item.GetComponent<RagdollGrabbableObject>() == null)
+                if (item.GetComponent<PetAI>() == null)
                 {
                     if (item.name.Contains("Apparatus"))
                     {
                         continue;
                     }
-                    if (item.itemProperties.twoHanded && !this.canGrabTwoHanded)
+                    if (item.itemProperties.twoHanded && !canGrabTwoHanded)
                     {
                         continue;
                     }
-                    if (item.name.Contains("RedLocustHive") && !this.canGrabHive)
+                    if (item.name.Contains("RedLocustHive") && !canGrabHive)
                     {
                         Log("Can't grab Hive");
+                        continue;
+                    }
+                    if (item.GetComponent<RagdollGrabbableObject>() != null && !canGrabPlayers)
+                    {
+                        Log("Can't grab Players");
                         continue;
                     }
                     if (dropShip != null && !item.isInShipRoom)
@@ -543,30 +560,59 @@ namespace DuckMod.Behaviors
             }
         }
 
-        public void GetDoor()
+        public DoorLock GetNextDoor()
         {
             if (!canOpenDoors)
             {
-                return;
+                return null;
             }
 
             foreach (DoorLock door in doors)
             {
-                if (IsDoorOpen(door))
-                {
-                    return;
-                }
                 Vector3 direction = door.transform.position - base.transform.position;
 
                 if (Angle2D(new Plane(Vector3.up, Vector3.zero), this.transform.forward, direction) <= 45 && Vector3.Distance(this.transform.position, door.transform.position) <= 2f)
                 {
-                    AnimatedObjectTrigger anim = door.GetComponent<AnimatedObjectTrigger>();
-                    anim.TriggerAnimationNonPlayer(overrideBool: true);
-                    door.OpenDoorAsEnemyServerRpc();
-                    return;
+                    if (!IsDoorOpen(door))
+                    {
+                        return door;
+                    }
                 }
             }
 
+            return null;
+        }
+
+        public void OpenDoor(DoorLock door)
+        {
+            Log("Try to open door");
+            if (door.isLocked && !door.isPickingLock)
+            {
+                Log("Door is locked");
+
+                KeyItem key = null;
+                foreach (GrabbableObject obj in grabbedItems)
+                {
+                    key = obj.GetComponent<KeyItem>();
+                    if (key != null)
+                    {
+                        Log("Key found");
+                        break;
+                    }
+                }
+                if (key == null)
+                {
+                    return;
+                }
+
+                Log("Door unlocked");
+                door.UnlockDoorSyncWithServer();
+                NetworkManager.Destroy(key.gameObject);
+            }
+
+            AnimatedObjectTrigger anim = door.GetComponent<AnimatedObjectTrigger>();
+            anim.TriggerAnimationNonPlayer(overrideBool: true);
+            door.OpenDoorAsEnemyServerRpc();
             return;
         }
 
@@ -633,6 +679,8 @@ namespace DuckMod.Behaviors
             this.agent.enabled = true;
             this.isInFactory = !this.isInFactory;
             this.targetItem = null;
+
+            TurnOnRendering();
         }
 
         protected void ChangeParent(NetworkObject networkObject)
@@ -974,7 +1022,7 @@ namespace DuckMod.Behaviors
             }
             if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
             {
-                if (!this.canUseItem)
+                if (!canUseItem)
                 {
                     return;
                 }
@@ -1062,7 +1110,7 @@ namespace DuckMod.Behaviors
             item.heldByPlayerOnServer = false;
             //SetItemInElevator(isInHangarShipRoom, isInElevator, placeObject);
 
-            item.OnPlaceObject();
+            //item.OnPlaceObject();
 
             this.grabbedItems.Remove(item);
             grabbingCooldown = 5f;
