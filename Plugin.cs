@@ -15,7 +15,7 @@ namespace DuckMod
     {
         private const string modGUID = "Dio93.DuckMod";
         private const string modName = "DuckMod";
-        private const string modVersion = "1.5.0.0";
+        private const string modVersion = "1.6.0.0";
 
         private readonly Harmony harmony = new Harmony(modGUID);
 
