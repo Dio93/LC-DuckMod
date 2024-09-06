@@ -431,9 +431,25 @@ namespace DuckMod.Behaviors
             float foundMinDistance = Mathf.Infinity;
             PlayerControllerB closestPlayer = null;
 
+            // if player is in another location than the pet, get the distance relative to the next portal
+            Vector3 entranceA = RoundManager.FindMainEntrancePosition(false, !this.isInFactory);
+            Vector3 entranceB = RoundManager.FindMainEntrancePosition(false, this.isInFactory);
+
+            float distToEntrance = Vector3.Distance(base.transform.position, entranceA);
+
+
             foreach (PlayerControllerB player in StartOfRound.Instance.allPlayerScripts)
             {
-                float distance = Vector3.Distance(base.transform.position, player.transform.position);
+                float distance;
+                if (player.isInsideFactory == this.isInFactory)
+                {
+                    distance = Vector3.Distance(base.transform.position, player.transform.position);
+                }
+                else
+                {
+                    distance = Vector3.Distance(player.transform.position, entranceB) + distToEntrance;
+                }
+                
                 if (distance < foundMinDistance)
                 {
                     closestPlayer = player;
