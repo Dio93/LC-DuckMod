@@ -12,6 +12,7 @@ namespace DuckMod.Behaviors
     [RequireComponent(typeof(NavMeshAgent))]
     internal class PetDuckAI : PetAI
     {
+        public static Item deadDuckItem;
         public static List<(float, Material)> materials = new List<(float, Material)>();
         private int shaderID;
         private float nextFlipCooldown = 60f;
@@ -237,7 +238,6 @@ namespace DuckMod.Behaviors
         }
 
 
-
         // =====================================================================================================================
 
         public void ChangeShader(int shaderID)
@@ -301,6 +301,25 @@ namespace DuckMod.Behaviors
                 ChangeShader(shaderID);
             }
         }
+
+        // OnDestroy
+        protected override void OnDying()
+        {
+            base.OnDying();
+            if (IsOwner)
+            {
+                DeadDuckBehavior.shaderID = shaderID;
+                GameObject deadDuck = GameObject.Instantiate(deadDuckItem.spawnPrefab, transform.position, transform.rotation);
+                //deadDuck.GetComponentInChildren<SkinnedMeshRenderer>().material = this.meshRenderers[0].material;
+                //PhysicsProp deadProp = deadDuck.GetComponent<PhysicsProp>();
+                //deadProp.scrapValue = 10;
+                DeadDuckBehavior deadDuckBehavior = deadDuck.GetComponent<DeadDuckBehavior>();
+                deadDuck.GetComponent<NetworkObject>().Spawn();
+                //deadDuckBehavior.TriggerInit(shaderID);
+                //deadDuckBehavior.InitServerRpc(deadProp.startFallingPosition, deadProp.targetFloorPosition, shaderID);
+            }
+        }
+
         // =====================================================================================================================
 
         // RPC Handler

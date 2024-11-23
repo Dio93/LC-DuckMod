@@ -87,6 +87,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Behaviors\DeadDuckBehavior.cs" />
     <Compile Include="Behaviors\DuckEggBehavior.cs" />
     <Compile Include="Behaviors\PetAI.cs" />
     <Compile Include="Behaviors\PetDuckAI.cs" />

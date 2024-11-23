@@ -1365,7 +1365,8 @@ namespace DuckMod.Behaviors
                 this.animator.SetBool("IsDead", true);
                 this.itemHolder.gameObject.SetActive(false);
                 this.interactPatter.gameObject.SetActive(false);
-                Destroy(this);
+                OnDying();
+                if (IsServer) this.gameObject.GetComponent<NetworkObject>().Despawn();
             }
         }
 

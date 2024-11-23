@@ -126,6 +126,7 @@ namespace DuckMod
             mls = BepInEx.Logging.Logger.CreateLogSource(modGUID);
             PetAI.mls = configDebug.Value ? mls : null;
 
+            DeadDuckBehavior.InitializeRPCS_DeadDuckBehavior();
             PetDuckAI.InitializeRPCS_PetDuckAI();
             PetAI.InitializeRPCS_PetAI();
             PetAI.maxPets = configMaxDucks.Value;
@@ -135,6 +136,11 @@ namespace DuckMod
             string path = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
             string assetDir = Path.Combine(path, "duckmod");
             AssetBundle bundle = AssetBundle.LoadFromFile(assetDir);
+            Item deadDuck = bundle.LoadAsset<Item>("Assets/Items/PetDuck/DeadDuckItem.asset");
+            GameObject spawnPrefab = deadDuck.spawnPrefab;
+            deadDuck.spawnPrefab.AddComponent<DeadDuckBehavior>();
+
+            PetDuckAI.deadDuckItem = deadDuck;
 
             Material duckShaderWhite = bundle.LoadAsset<Material>("Assets/Items/PetDuck/DuckShader White.mat");
             Material duckShaderGreen = bundle.LoadAsset<Material>("Assets/Items/PetDuck/DuckShader Green.mat");
@@ -165,6 +171,10 @@ namespace DuckMod
             petDuckHatAI.hittable = configHittable.Value;
             petDuckHatAI.maxHp = configHp.Value;
             petDuckHatAI.SetScrapValue(duckPrice / 2f);
+
+            // Register dead duck
+            LethalLib.Modules.NetworkPrefabs.RegisterNetworkPrefab(deadDuck.spawnPrefab);
+            Utilities.FixMixerGroups(deadDuck.spawnPrefab);
 
             // Register pet duck
 
