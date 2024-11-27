@@ -577,14 +577,16 @@ namespace DuckMod.Behaviors
 
                 Vector3 pos = RoundManager.Instance.GetNavMeshPosition(item.transform.position);
 
-                if (item != null && item.GetComponent<PetDuckAI>() == null && RoundManager.Instance.GotNavMeshPositionResult 
-                    && !item.isInShipRoom)
+                if (item != null)
                 {
-                    float dist = Vector3.Distance(base.transform.position, item.transform.position);
-                    if (dist <= nearest && item.grabbable && !item.isHeld && IsInSight(item.transform))
+                    if (item.GetComponent<PetDuckAI>() == null && RoundManager.Instance.GotNavMeshPositionResult && !item.isInShipRoom)
                     {
-                        nearest = dist;
-                        targetItem = item;
+                        float dist = Vector3.Distance(base.transform.position, item.transform.position);
+                        if (dist <= nearest && item.grabbable && !item.isHeld && IsInSight(item.transform))
+                        {
+                            nearest = dist;
+                            targetItem = item;
+                        }
                     }
                 }
             }

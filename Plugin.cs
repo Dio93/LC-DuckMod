@@ -7,6 +7,7 @@ using LethalLib.Modules;
 using DuckMod.Behaviors;
 using System.IO;
 using BepInEx.Configuration;
+using DunGen.Graph;
 
 namespace DuckMod
 {
@@ -34,8 +35,8 @@ namespace DuckMod
         private ConfigEntry<float> configSpeed;
         private ConfigEntry<bool> configHittable;
         private ConfigEntry<int> configHp;
-        private ConfigEntry<bool> configCanOpenDoors;
         private ConfigEntry<bool> configUseFireExits;
+        private ConfigEntry<bool> configCanOpenDoors;
         private ConfigEntry<float> configTextureWhite;
         private ConfigEntry<float> configTextureGreen;
         private ConfigEntry<float> configTextureGold;
@@ -64,11 +65,6 @@ namespace DuckMod
                                           25,
                                           "Price of a duck");
 
-            configUseFireExits = Config.Bind("Duck",
-                                            "Use fire exits",
-                                            true,
-                                            "Can the duck use fire exits?");
-
             configCarryAmount = Config.Bind("Duck.Items",
                                             "Carry Amount",
                                             1,
@@ -93,6 +89,11 @@ namespace DuckMod
                                            "Can use item",
                                            false,
                                            "Can the duck use items?");
+
+            configUseFireExits = Config.Bind("Duck",
+                                "Use fire exits",
+                                true,
+                                "Can the duck use fire exits?");
 
             configCanOpenDoors = Config.Bind("Duck",
                                              "Can open doors",
@@ -160,8 +161,8 @@ namespace DuckMod
             PetAI.canGrabTwoHanded = configCanGrabTwoHanded.Value;
             PetAI.canGrabHive = configCanGrabHive.Value;
             PetAI.canUseItem = configCanUseItem.Value;
-            PetAI.canOpenDoors = configCanOpenDoors.Value;
             PetAI.useFireExits = configUseFireExits.Value;
+            PetAI.canOpenDoors = configCanOpenDoors.Value;
 
             Item petDuck = bundle.LoadAsset<Item>("Assets/Items/PetDuck/PetDuckItem.asset");
             PetDuckAI petDuckAI = petDuck.spawnPrefab.AddComponent<PetDuckAI>();
@@ -179,12 +180,15 @@ namespace DuckMod
             petDuckHatAI.maxHp = configHp.Value;
             petDuckHatAI.SetScrapValue(duckPrice / 2f);
 
+            Item duckEgg = bundle.LoadAsset<Item>("Assets/Items/PetDuck/DuckEgg.asset");
+            DuckEggBehavior.petDuckPrefab = petDuck.spawnPrefab;
+            duckEgg.spawnPrefab.AddComponent<DuckEggBehavior>();
+
             // Register dead duck
             LethalLib.Modules.NetworkPrefabs.RegisterNetworkPrefab(deadDuck.spawnPrefab);
             Utilities.FixMixerGroups(deadDuck.spawnPrefab);
 
             // Register pet duck
-
             LethalLib.Modules.NetworkPrefabs.RegisterNetworkPrefab(petDuck.spawnPrefab);
             Utilities.FixMixerGroups(petDuck.spawnPrefab);
 
@@ -197,7 +201,6 @@ namespace DuckMod
             Items.RegisterShopItem(petDuck, duckNode, null, null, duckPrice);
 
             // Register pet duck with hat
-
             LethalLib.Modules.NetworkPrefabs.RegisterNetworkPrefab(petDuckHat.spawnPrefab);
             Utilities.FixMixerGroups(petDuckHat.spawnPrefab);
 
@@ -208,6 +211,14 @@ namespace DuckMod
                 "\n\nPlease CONFIRM or DENY.\n\n";
 
             Items.RegisterShopItem(petDuckHat, duckHatNode, null, null, duckPrice);
+
+            // Register duck egg
+            LethalLib.Modules.NetworkPrefabs.RegisterNetworkPrefab(duckEgg.spawnPrefab);
+            Utilities.FixMixerGroups(duckEgg.spawnPrefab);
+            Items.RegisterScrap(duckEgg, 100, Levels.LevelTypes.All);
+
+            // ---------------------------------------------------------------------
+
 
             mls.LogInfo("The duck mod 1.4.0 has awaken :)");
             //foreach(Items.PlainItem each in Items.plainItems)

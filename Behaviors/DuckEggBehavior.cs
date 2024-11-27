@@ -5,27 +5,39 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Unity.Netcode;
+using UnityEngine;
 using UnityEngine.PlayerLoop;
 
 namespace DuckMod.Behaviors
 {
-    internal class DuckEggBehavior : UnityEngine.MonoBehaviour 
+    internal class DuckEggBehavior : NetworkBehaviour
     {
-        public static PetDuckAI petDuckPrefab;
-        int startDay;
+        public static GameObject petDuckPrefab;
+        protected PhysicsProp physicsProp;
+        protected NetworkObject networkObject;
+        float wait = 30f;
 
         public void Start()
         {
-            startDay = StartOfRound.Instance.daysPlayersSurvivedInARow;
+            networkObject = GetComponent<NetworkObject>();
+            physicsProp = GetComponent<PhysicsProp>();
         }
 
         public void Update()
         {
-            if (StartOfRound.Instance.daysPlayersSurvivedInARow - startDay == 2) 
+            wait -= Time.deltaTime;
+            if (wait <= 0)
             {
-                if (petDuckPrefab != null)
+                wait = 10f;
+                if (!physicsProp.isHeld && physicsProp.isInShipRoom && UnityEngine.Random.Range(0, 1f) < 0.01f)
                 {
-                    NetworkManager.Instantiate(petDuckPrefab, this.transform.position, this.transform.rotation);
+                    if (petDuckPrefab != null && IsOwner)
+                    {
+                        // spawn duck and destroy itself
+                        GameObject duck = Instantiate(petDuckPrefab, transform.position, transform.rotation);
+                        duck.GetComponent<NetworkObject>().Spawn();
+                        networkObject.Despawn();
+                    }
                 }
             }
         }

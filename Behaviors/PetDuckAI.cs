@@ -164,7 +164,7 @@ namespace DuckMod.Behaviors
 
                             Vector3 direction = (this.targetPlayer.transform.position - this.transform.position).normalized;
 
-                            this.destination = this.targetPlayer.transform.position - direction * 1.5f;
+                            this.destination = this.targetPlayer.transform.position - (0.5f * direction);
                         }
                         else
                         {
@@ -310,7 +310,7 @@ namespace DuckMod.Behaviors
             if (IsOwner)
             {
                 DeadDuckBehavior.shaderID = shaderID;
-                GameObject deadDuck = GameObject.Instantiate(deadDuckItem.spawnPrefab, transform.position, transform.rotation);
+                GameObject deadDuck = Instantiate(deadDuckItem.spawnPrefab, transform.position, transform.rotation);
                 //deadDuck.GetComponentInChildren<SkinnedMeshRenderer>().material = this.meshRenderers[0].material;
                 //PhysicsProp deadProp = deadDuck.GetComponent<PhysicsProp>();
                 //deadProp.scrapValue = 10;
