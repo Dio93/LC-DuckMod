@@ -96,6 +96,10 @@ namespace DuckMod.Behaviors
 
         private bool freeze = false;
 
+        public static bool useFireExits;
+        protected List<Teleport> teleports = new List<Teleport>();
+        Vector3 nextEntrance;
+        Vector3 targetEntrance;
 
         public virtual void Start()
         {
@@ -182,6 +186,8 @@ namespace DuckMod.Behaviors
             {
                 if (this.agent.enabled)
                 {
+                    GetNextTeleport();
+
                     nextItemCheck -= Time.deltaTime;
                     if (nextItemCheck < 0)
                     {
@@ -384,6 +390,42 @@ namespace DuckMod.Behaviors
 
             doors = FindObjectsOfType<DoorLock>();
 
+            // initialize teleports
+            teleports.Clear();
+            Teleport tmpTeleport = null;
+            if (useFireExits)
+            {
+                foreach (EntranceTeleport entrance in FindObjectsOfType<EntranceTeleport>())
+                {
+                    tmpTeleport = null;
+                    foreach (Teleport teleport in teleports)
+                    {
+                        if (entrance.entranceId == teleport.id)
+                        {
+                            tmpTeleport = teleport;
+                        }
+                    }
+                    if (tmpTeleport == null)
+                    {
+                        tmpTeleport = new Teleport(entrance.entranceId);
+                        teleports.Add(tmpTeleport);
+                    }
+                    if (entrance.isEntranceToBuilding)
+                    {
+                        tmpTeleport.entrance = entrance.transform.position;
+                    }
+                    else
+                    {
+                        tmpTeleport.exit = entrance.transform.position;
+                    }
+                }
+            }
+            // add main entrance
+            tmpTeleport = new Teleport(-1);
+            tmpTeleport.entrance = RoundManager.FindMainEntrancePosition(false, false);
+            tmpTeleport.exit = RoundManager.FindMainEntrancePosition(false, true);
+            teleports.Add(tmpTeleport);
+
             OnStartRound();
         }
 
@@ -432,11 +474,8 @@ namespace DuckMod.Behaviors
             PlayerControllerB closestPlayer = null;
 
             // if player is in another location than the pet, get the distance relative to the next portal
-            Vector3 entranceA = RoundManager.FindMainEntrancePosition(false, !this.isInFactory);
-            Vector3 entranceB = RoundManager.FindMainEntrancePosition(false, this.isInFactory);
 
-            float distToEntrance = Vector3.Distance(base.transform.position, entranceA);
-
+            float distToEntrance = Vector3.Distance(base.transform.position, nextEntrance);
 
             foreach (PlayerControllerB player in StartOfRound.Instance.allPlayerScripts)
             {
@@ -447,7 +486,7 @@ namespace DuckMod.Behaviors
                 }
                 else
                 {
-                    distance = Vector3.Distance(player.transform.position, entranceB) + distToEntrance;
+                    distance = Vector3.Distance(player.transform.position, targetEntrance) + distToEntrance;
                 }
                 
                 if (distance < foundMinDistance)
@@ -667,29 +706,113 @@ namespace DuckMod.Behaviors
             this.animator.SetBool("IsDancing", false);
         }
 
-        protected void Teleport()
+        protected void GetNextTeleport()
         {
-            Vector3 nextEntrance;
-            Vector3 targetEntrance;
+            // Original code by TerabyteTim
+            /* 
+            EntranceTeleport[] entranceTeleports = FindObjectsOfType<EntranceTeleport>();
+            int                closestIndex      = -1;
+            float              closestDist       = float.MaxValue;
+
+            for (int i = 0; i < entranceTeleports.Length; i++)
+            {
+                //Only look for entrances inside/outside of building based on our state
+                if (this.isInFactory == entranceTeleports[i].isEntranceToBuilding)
+                {
+                    continue;
+                }
+
+                float dist = Vector3.Distance(this.transform.position, entranceTeleports[i].transform.position);
+
+                if (dist < closestDist)
+                {
+                    closestIndex = i;
+                    closestDist  = dist;
+                }
+            }
+
+            //Set next and main good way
+            if (closestIndex >= 0)
+            {
+                nextEntrance = entranceTeleports[closestIndex].transform.position;
+
+                //Find target based on next
+                int targetIndex = -1;
+
+                for (int i = 0; i < entranceTeleports.Length; i++)
+                {
+                    if (entranceTeleports[i].entranceId == entranceTeleports[closestIndex].entranceId && entranceTeleports[i].isEntranceToBuilding != entranceTeleports[closestIndex].isEntranceToBuilding)
+                    {
+                        targetIndex = i;
+                        break;
+                    }
+                }
+
+                targetEntrance = entranceTeleports[targetIndex].transform.position;
+            }
+
+            //Failsafe, set to main entrance only
+            else 
+            {
+                if (this.isInFactory)
+                {
+                    nextEntrance   = RoundManager.FindMainEntrancePosition(false, false);
+                    targetEntrance = RoundManager.FindMainEntrancePosition(false, true);
+                }
+                else
+                {
+                    nextEntrance   = RoundManager.FindMainEntrancePosition(false, true);
+                    targetEntrance = RoundManager.FindMainEntrancePosition(false, false);
+                }
+            }
+            */
+
+            int closestIndex = -1;
+            float closestDist = Mathf.Infinity;
 
             if (this.isInFactory)
             {
-                nextEntrance = RoundManager.FindMainEntrancePosition(false, false);
-                targetEntrance  = RoundManager.FindMainEntrancePosition(false, true);
+                for (int i = 0; i < teleports.Count; i++)
+                {
+                    float dist = Vector3.Distance(this.transform.position, teleports[i].exit);
+
+                    if (dist < closestDist)
+                    {
+                        closestIndex = i;
+                        closestDist = dist;
+                    }
+                }
+
+                nextEntrance = teleports[closestIndex].exit;
+                targetEntrance = teleports[closestIndex].entrance;
             }
             else
             {
-                nextEntrance = RoundManager.FindMainEntrancePosition(false, true);
-                targetEntrance = RoundManager.FindMainEntrancePosition(false, false); 
+                for (int i = 0; i < teleports.Count; i++)
+                {
+                    float dist = Vector3.Distance(this.transform.position, teleports[i].entrance);
+
+                    if (dist < closestDist)
+                    {
+                        closestIndex = i;
+                        closestDist = dist;
+                    }
+                }
+
+                nextEntrance = teleports[closestIndex].entrance;
+                targetEntrance = teleports[closestIndex].exit;
             }
+        }
+
+        protected void Teleport()
+        {
             if (Vector3.Distance(this.transform.position, nextEntrance) > 2f)
             {
                 this.agent.SetDestination(nextEntrance);
                 return;
             }
+
             Log("Duck is teleporting");
-            nextEntrance = RoundManager.Instance.GetNavMeshPosition(nextEntrance);
-            targetEntrance = RoundManager.Instance.GetNavMeshPosition(targetEntrance);
             this.agent.enabled = false;
             base.transform.position = RoundManager.Instance.GetNavMeshPosition(targetEntrance);
             this.agent.enabled = true;

@@ -131,7 +131,8 @@ namespace DuckMod.Behaviors
             }
 
             // player on another level
-            else if ((this.targetPlayer.isInsideFactory && !this.isInFactory) || (!this.targetPlayer.isInsideFactory && this.isInFactory))
+            //else if ((this.targetPlayer.isInsideFactory && !this.isInFactory) || (!this.targetPlayer.isInsideFactory && this.isInFactory))
+            else if (this.targetPlayer.isInsideFactory != this.isInFactory)
             {
                 this.duckState = DuckState.MovingToEntrance;
             }

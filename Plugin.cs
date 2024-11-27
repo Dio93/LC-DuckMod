@@ -35,6 +35,7 @@ namespace DuckMod
         private ConfigEntry<bool> configHittable;
         private ConfigEntry<int> configHp;
         private ConfigEntry<bool> configCanOpenDoors;
+        private ConfigEntry<bool> configUseFireExits;
         private ConfigEntry<float> configTextureWhite;
         private ConfigEntry<float> configTextureGreen;
         private ConfigEntry<float> configTextureGold;
@@ -62,6 +63,11 @@ namespace DuckMod
                                           "Duck Price",
                                           25,
                                           "Price of a duck");
+
+            configUseFireExits = Config.Bind("Duck",
+                                            "Use fire exits",
+                                            true,
+                                            "Can the duck use fire exits?");
 
             configCarryAmount = Config.Bind("Duck.Items",
                                             "Carry Amount",
@@ -155,6 +161,7 @@ namespace DuckMod
             PetAI.canGrabHive = configCanGrabHive.Value;
             PetAI.canUseItem = configCanUseItem.Value;
             PetAI.canOpenDoors = configCanOpenDoors.Value;
+            PetAI.useFireExits = configUseFireExits.Value;
 
             Item petDuck = bundle.LoadAsset<Item>("Assets/Items/PetDuck/PetDuckItem.asset");
             PetDuckAI petDuckAI = petDuck.spawnPrefab.AddComponent<PetDuckAI>();
