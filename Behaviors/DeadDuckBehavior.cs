@@ -25,7 +25,7 @@ namespace DuckMod.Behaviors
             }
         }
 
-        public static int shaderID;
+        public int shaderID;
         private int currShaderID;
 
         public static List<(float, Material)> materials = null;
@@ -67,8 +67,10 @@ namespace DuckMod.Behaviors
         {
             //physicsProp = GetComponent<PhysicsProp>();
 
+            physicsProp.enabled = false;
             physicsProp.startFallingPosition = startFallingPos;
             physicsProp.targetFloorPosition = targetFloorPos;
+            physicsProp.enabled = true;
 
             //transform.position = startFallingPos;
 
@@ -149,7 +151,7 @@ namespace DuckMod.Behaviors
             }
             else
             {
-                reader.ReadValueSafe(out Data data, default(FastBufferWriter.ForStructs));
+                //reader.ReadValueSafe(out Data data, default(FastBufferWriter.ForStructs));
                 //ByteUnpacker.ReadValueBitPacked(reader, out short value);
                 ((DeadDuckBehavior)target).__rpc_exec_stage = __RpcExecStage.Server;
                 ((DeadDuckBehavior)target).InitServerRpc();

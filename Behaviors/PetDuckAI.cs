@@ -309,12 +309,12 @@ namespace DuckMod.Behaviors
             base.OnDying();
             if (IsOwner)
             {
-                DeadDuckBehavior.shaderID = shaderID;
                 GameObject deadDuck = Instantiate(deadDuckItem.spawnPrefab, transform.position, transform.rotation);
                 //deadDuck.GetComponentInChildren<SkinnedMeshRenderer>().material = this.meshRenderers[0].material;
                 //PhysicsProp deadProp = deadDuck.GetComponent<PhysicsProp>();
                 //deadProp.scrapValue = 10;
                 DeadDuckBehavior deadDuckBehavior = deadDuck.GetComponent<DeadDuckBehavior>();
+                deadDuckBehavior.shaderID = shaderID;
                 deadDuck.GetComponent<NetworkObject>().Spawn();
                 //deadDuckBehavior.TriggerInit(shaderID);
                 //deadDuckBehavior.InitServerRpc(deadProp.startFallingPosition, deadProp.targetFloorPosition, shaderID);

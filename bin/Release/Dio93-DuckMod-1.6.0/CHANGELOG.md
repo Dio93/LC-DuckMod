@@ -1,3 +1,11 @@
+<h1>Version 1.6.0</h1>
+
+- Ducks can now use fire exits (thanks to [TerabyteTim](https://github.com/TerabyteTim)).
+- Changed distance calculation to players:
+    - The duck will follow player through entrances.
+- Ducks can be killed, grabbed and sold now.
+- New configuration options.
+
 <h1>Version 1.5.0</h1>
 
 - The duck can now grab dead players.

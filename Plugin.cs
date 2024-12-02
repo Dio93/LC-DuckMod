@@ -131,6 +131,7 @@ namespace DuckMod
                                              "Probability of gold texture");
 
             mls = BepInEx.Logging.Logger.CreateLogSource(modGUID);
+            mls.LogInfo("Start DuckMod " + modVersion);
             PetAI.mls = configDebug.Value ? mls : null;
 
             DeadDuckBehavior.InitializeRPCS_DeadDuckBehavior();
@@ -213,14 +214,12 @@ namespace DuckMod
             Items.RegisterShopItem(petDuckHat, duckHatNode, null, null, duckPrice);
 
             // Register duck egg
-            LethalLib.Modules.NetworkPrefabs.RegisterNetworkPrefab(duckEgg.spawnPrefab);
-            Utilities.FixMixerGroups(duckEgg.spawnPrefab);
-            Items.RegisterScrap(duckEgg, 100, Levels.LevelTypes.All);
+            //LethalLib.Modules.NetworkPrefabs.RegisterNetworkPrefab(duckEgg.spawnPrefab);
+            //Utilities.FixMixerGroups(duckEgg.spawnPrefab);
+            //Items.RegisterScrap(duckEgg, 100, Levels.LevelTypes.All);
 
             // ---------------------------------------------------------------------
 
-
-            mls.LogInfo("The duck mod 1.4.0 has awaken :)");
             //foreach(Items.PlainItem each in Items.plainItems)
             //{
             //    mls.LogInfo(each.item.itemName);
